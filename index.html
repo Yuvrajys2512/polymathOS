@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>POLYMATH OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    /* ── TOKENS ──────────────────────────────────────────── */
+    :root {
+      --bg:               #06060f;
+      --panel:            rgba(255,255,255,0.03);
+      --panel-h:          rgba(255,255,255,0.055);
+      --border:           rgba(255,255,255,0.07);
+      --border-a:         rgba(0,217,177,0.38);
+      --ink:              #e8e8f0;
+      --muted:            rgba(232,232,240,0.42);
+      --accent:           #00d9b1;
+      --accent-g:         rgba(0,217,177,0.14);
+      --accent-gs:        rgba(0,217,177,0.26);
+      --purple:           #8b5cf6;
+      --purple-g:         rgba(139,92,246,0.14);
+      --danger:           #f43f5e;
+      --radius:           12px;
+      --radius-s:         8px;
+      --mono:             'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    /* ── RESET ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { min-height: 100%; }
+
+    body {
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 65% 55% at 12% 38%, rgba(0,217,177,0.055) 0%, transparent 68%),
+        radial-gradient(ellipse 55% 65% at 88% 18%, rgba(139,92,246,0.055) 0%, transparent 68%),
+        radial-gradient(ellipse 40% 40% at 58% 82%, rgba(96,165,250,0.035) 0%, transparent 68%);
+      color: var(--ink);
+      font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: -0.01em;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, textarea, select { font: inherit; letter-spacing: inherit; }
+
+    /* ── BUTTONS ─────────────────────────────────────────── */
+    button {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: var(--radius-s);
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 160ms ease;
+    }
+    button:hover { background: var(--panel-h); border-color: rgba(255,255,255,0.13); transform: translateY(-1px); }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #021a16;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      box-shadow: 0 0 22px var(--accent-gs), 0 0 60px var(--accent-g);
+    }
+    button.primary:hover {
+      background: #00f0c5; border-color: #00f0c5;
+      box-shadow: 0 0 32px var(--accent-gs), 0 0 90px var(--accent-g);
+      transform: translateY(-2px);
+    }
+    button.ghost { background: transparent; }
+    button.icon {
+      width: 32px; height: 32px; padding: 0;
+      display: inline-grid; place-items: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    button.danger { color: var(--danger); }
+    button.danger:hover { background: rgba(244,63,94,0.1); border-color: rgba(244,63,94,0.28); }
+
+    /* ── INPUTS ──────────────────────────────────────────── */
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      border-radius: var(--radius-s);
+      color: var(--ink);
+      padding: 10px 13px;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    textarea { resize: vertical; min-height: 112px; line-height: 1.55; }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--border-a);
+      box-shadow: 0 0 0 3px var(--accent-g), 0 0 22px var(--accent-g);
+    }
+    select {
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(232,232,240,0.35)'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+      padding-right: 28px;
+    }
+    select option { background: #12121f; }
+
+    /* ── APP SHELL ───────────────────────────────────────── */
+    .app { max-width: 1480px; margin: 0 auto; padding: 20px; }
+
+    /* ── TOPBAR ──────────────────────────────────────────── */
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(200px,250px) 1fr auto;
+      gap: 14px; align-items: center;
+      margin-bottom: 20px; padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-logo {
+      font-size: 17px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      background: linear-gradient(130deg, var(--accent) 0%, #60a5fa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .brand-sub {
+      color: var(--muted); font-size: 11px; letter-spacing: 0.06em;
+      margin-top: 3px; font-family: var(--mono);
+    }
+    .searchbar { display: grid; grid-template-columns: 1fr 128px 118px; gap: 8px; }
+    .kbd {
+      font-family: var(--mono); font-size: 10px;
+      border: 1px solid rgba(255,255,255,0.14); border-radius: 4px;
+      padding: 1px 5px; background: rgba(255,255,255,0.05); color: var(--ink);
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(290px,360px) minmax(420px,1fr) minmax(265px,315px);
+      gap: 14px; align-items: start;
+    }
+    .stack { display: grid; gap: 14px; }
+
+    /* ── SECTION CARD ────────────────────────────────────── */
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      transition: border-color 200ms ease;
+    }
+    .section:hover { border-color: rgba(255,255,255,0.1); }
+    .section.flat { background: transparent; border: none; padding: 0; backdrop-filter: none; }
+
+    .section-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 14px;
+    }
+    .section-head h2 {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.11em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .badge {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      border-radius: 99px; padding: 2px 8px;
+    }
+
+    /* ── CAPTURE ─────────────────────────────────────────── */
+    .capture-actions {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; margin-top: 10px;
+    }
+    .char-count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    /* ── DOMAIN GRID ─────────────────────────────────────── */
+    .domain-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 7px; }
+    .domain-tile {
+      border: 1px solid var(--border); border-radius: var(--radius-s);
+      padding: 10px 12px; background: rgba(255,255,255,0.02);
+      cursor: pointer; position: relative; overflow: hidden;
+      transition: all 180ms ease;
+    }
+    .domain-tile::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 3px; height: 100%; border-radius: 3px 0 0 3px;
+      background: var(--dc, var(--accent)); opacity: 0.5;
+      transition: opacity 160ms ease;
+    }
+    .domain-tile.active {
+      border-color: var(--dc, var(--accent));
+      background: rgba(255,255,255,0.05);
+      box-shadow: 0 0 24px rgba(0,0,0,0.35), inset 0 0 24px rgba(255,255,255,0.015);
+    }
+    .domain-tile.active::before { opacity: 1; }
+    .domain-tile:hover:not(.active) { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.11); }
+    .domain-tile strong { display: block; font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+    .domain-tile span { font-family: var(--mono); color: var(--muted); font-size: 10px; }
+
+    /* ── FILTER CHIPS ────────────────────────────────────── */
+    .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chip {
+      border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+      border-radius: 99px; padding: 5px 11px;
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      color: var(--muted); transition: all 150ms ease;
+    }
+    .chip:hover { border-color: rgba(255,255,255,0.14); color: var(--ink); }
+    .chip.active { background: var(--accent-g); border-color: var(--border-a); color: var(--accent); }
+
+    /* ── THOUGHT STREAM ──────────────────────────────────── */
+    .stream { display: grid; gap: 8px; }
+
+    .thought {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.025);
+      border-radius: var(--radius-s);
+      padding: 13px 13px 11px;
+      position: relative; overflow: hidden;
+      transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+      animation: slideIn 220ms ease both;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .thought::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 2px; height: 100%;
+      background: var(--dc, var(--accent)); opacity: 0.55;
+    }
+    .thought:hover {
+      border-color: rgba(255,255,255,0.1); transform: translateX(2px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.32);
+    }
+    .thought.done { opacity: 0.48; }
+    .thought.done .thought-text { text-decoration: line-through; color: var(--muted); }
+
+    .thought-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .thought-text { font-size: 13.5px; line-height: 1.56; margin: 8px 0 10px; white-space: pre-wrap; }
+
+    .meta { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .pill {
+      border-radius: 99px; background: rgba(255,255,255,0.055);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: var(--muted); padding: 3px 8px;
+      font-size: 10px; font-weight: 500; font-family: var(--mono);
+    }
+    .pill.dom { color: var(--dc,var(--accent)); background: rgba(0,0,0,0.25); border-color: var(--dc,var(--accent)); opacity: 0.85; }
+    .pill.typ { color: #a78bfa; background: rgba(139,92,246,0.09); border-color: rgba(139,92,246,0.2); }
+    .pill.high  { color: #f87171; background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.24); }
+    .pill.medium{ color: #fbbf24; background: rgba(251,191,36,0.09); border-color: rgba(251,191,36,0.22); }
+    .pill.low   { color: #4ade80; background: rgba(74,222,128,0.09); border-color: rgba(74,222,128,0.22); }
+    .pill.pending { color: var(--accent); background: var(--accent-g); border-color: rgba(0,217,177,0.22); animation: blink 1.1s ease infinite; }
+    @keyframes blink { 0%,100%{opacity:.65} 50%{opacity:1} }
+
+    .thought-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .edit-box { display: grid; gap: 8px; margin-top: 10px; }
+    .type-icon { font-size: 13px; flex-shrink: 0; }
+
+    /* ── TIMER ───────────────────────────────────────────── */
+    .timer-wrap {
+      position: relative; width: 168px; height: 168px;
+      margin: 4px auto 14px;
+    }
+    .timer-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .timer-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    }
+    .timer-digits {
+      font-family: var(--mono); font-size: 31px; font-weight: 500;
+      color: var(--ink); line-height: 1; letter-spacing: -0.02em;
+    }
+    .timer-mode-lbl {
+      font-size: 9px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .timer-controls { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 7px; }
+
+    /* ── PROJECTS ────────────────────────────────────────── */
+    .project { display: grid; gap: 8px; padding: 10px 0; border-top: 1px solid var(--border); }
+    .project:first-of-type { border-top: 0; padding-top: 0; }
+    .project-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .project-row strong { font-size: 13px; font-weight: 500; }
+    .progress-track {
+      height: 3px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      border-radius: 99px;
+      box-shadow: 0 0 8px var(--accent-gs);
+      transition: width 220ms ease;
+    }
+    input[type="range"] {
+      padding: 0; box-shadow: none; border: none;
+      height: 3px; background: transparent; cursor: pointer; accent-color: var(--accent);
+    }
+    .mini-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 8px; }
+
+    /* ── SESSION LOG ─────────────────────────────────────── */
+    .session-log {
+      display: grid; gap: 7px; max-height: 230px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+    .session-item {
+      border: 1px solid var(--border); border-radius: var(--radius-s);
+      padding: 9px 11px; background: rgba(255,255,255,0.02);
+    }
+    .session-item strong { font-size: 12px; font-family: var(--mono); color: var(--accent); }
+    .session-item div { color: var(--muted); font-size: 11px; font-family: var(--mono); margin-top: 3px; }
+
+    /* ── API SECTION ─────────────────────────────────────── */
+    .api-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .notice { color: var(--muted); font-size: 11px; line-height: 1.55; margin-top: 8px; }
+    .api-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-family: var(--mono); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .dot.on  { background: var(--accent); box-shadow: 0 0 7px var(--accent); }
+    .dot.off { background: rgba(255,255,255,0.22); }
+
+    /* ── INTENTION ───────────────────────────────────────── */
+    .int-status { display: flex; align-items: center; gap: 5px; font-size: 11px; font-family: var(--mono); color: var(--muted); }
+
+    /* ── ARCHIVE ─────────────────────────────────────────── */
+    .archive { margin-top: 12px; }
+
+    /* ── EMPTY STATE ─────────────────────────────────────── */
+    .empty {
+      border: 1px dashed rgba(255,255,255,0.07); background: rgba(255,255,255,0.01);
+      color: var(--muted); padding: 28px 20px; border-radius: var(--radius-s);
+      text-align: center; font-size: 13px; line-height: 1.65;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 1120px) {
+      .layout { grid-template-columns: 1fr 1fr; }
+      .layout > .stack:last-child { grid-column: 1/-1; grid-template-columns: repeat(2,1fr); display: grid; }
+    }
+    @media (max-width: 760px) {
+      .app { padding: 12px; }
+      .topbar, .layout, .searchbar, .layout > .stack:last-child { grid-template-columns: 1fr; }
+      .domain-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useEffect, useMemo, useRef, useState } = React;
+
+    const STORAGE_KEY   = "polymath-os-state-v1";
+    const DOMAINS       = ["AI/ML","Writing","Business","Design","Physics","Health","Learning","Life"];
+    const TYPE_OPTS     = ["All","idea","task","question","insight","note"];
+    const PRIORITY_OPTS = ["All","high","medium","low"];
+
+    const DOMAIN_COLOR = {
+      "AI/ML":"#00d9b1","Writing":"#a78bfa","Business":"#fbbf24",
+      "Design":"#f472b6","Physics":"#60a5fa","Health":"#4ade80",
+      "Learning":"#fb923c","Life":"#e879f9",
+    };
+    const TYPE_ICON = { idea:"◈", task:"◻", question:"?", insight:"◆", note:"·" };
+
+    const SEED = {
+      thoughts: [],
+      projects: [
+        { id: crypto.randomUUID(), name: "Build POLYMATH OS", progress: 20 },
+        { id: crypto.randomUUID(), name: "Define active research threads", progress: 10 },
+      ],
+      intention: "", intentionHistory: [],
+      sessions: [], apiKey: "",
+      pomodoro: { focusMinutes: 25, breakMinutes: 5 },
+    };
+
+    function loadState() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return s ? { ...SEED, ...s } : SEED;
+      } catch { return SEED; }
+    }
+
+    function normType(v) {
+      const t = String(v||"note").toLowerCase();
+      return t === "ask" ? "question" : TYPE_OPTS.slice(1).includes(t) ? t : "note";
+    }
+
+    function localClassify(text) {
+      const lc = text.toLowerCase();
+      const domain =
+        DOMAINS.find(d => lc.includes(d.toLowerCase().split("/")[0])) ||
+        (/(model|agent|prompt|llm|ai|ml|neural)/.test(lc) ? "AI/ML"    :
+         /(write|essay|story|blog|draft)/.test(lc)        ? "Writing"  :
+         /(startup|revenue|customer|market|sales)/.test(lc)? "Business" :
+         /(layout|ui|ux|brand|visual)/.test(lc)           ? "Design"   :
+         /(physics|quantum|energy|field)/.test(lc)         ? "Physics"  :
+         /(gym|sleep|diet|run|health)/.test(lc)            ? "Health"   :
+         /(learn|course|book|study)/.test(lc)              ? "Learning" : "Life");
+      const type =
+        /\?$|how |why |what if|should i/.test(lc)                          ? "question" :
+        /\b(todo|task|need to|must|ship|finish|call|email|build)\b/.test(lc)? "task"     :
+        /\b(realized|insight|pattern|connection|principle)\b/.test(lc)     ? "insight"  :
+        /\b(idea|could|maybe|concept)\b/.test(lc)                          ? "idea"     : "note";
+      const priority =
+        /\b(urgent|today|asap|deadline|important)\b/.test(lc) ? "high"   :
+        /\b(soon|next|should)\b/.test(lc)                     ? "medium" : "low";
+      const words = text.replace(/[^\w\s]/g,"").split(/\s+/).filter(Boolean);
+      return {
+        domain, type, priority,
+        insight: words.slice(0,8).join(" ") || "Captured thought",
+        tags: [...new Set(words.filter(w=>w.length>5).slice(0,2).map(w=>w.toLowerCase()))],
+      };
+    }
+
+    async function classifyWithClaude(text, apiKey) {
+      if (!apiKey) return localClassify(text);
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 220,
+          messages: [{ role: "user", content:
+            `Classify this thought for POLYMATH OS. Return ONLY JSON with keys: domain, type, insight, priority, tags.\n` +
+            `domain: one of ${DOMAINS.join(", ")}. type: idea|task|question|insight|note. insight: ≤8 words. priority: high|medium|low. tags: 1-2 strings.\n\nThought: ${text}`
+          }],
+        }),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const data = await res.json();
+      const raw  = data.content?.[0]?.text || "{}";
+      const p    = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || raw);
+      const fb   = localClassify(text);
+      return {
+        domain:   DOMAINS.includes(p.domain) ? p.domain : fb.domain,
+        type:     normType(p.type),
+        insight:  String(p.insight || fb.insight).slice(0,80),
+        priority: PRIORITY_OPTS.slice(1).includes(String(p.priority).toLowerCase()) ? String(p.priority).toLowerCase() : "medium",
+        tags:     Array.isArray(p.tags) ? p.tags.slice(0,2).map(String) : [],
+      };
+    }
+
+    function fmt(s) {
+      return `${Math.floor(s/60).toString().padStart(2,"0")}:${Math.floor(s%60).toString().padStart(2,"0")}`;
+    }
+
+    /* ─── SVG TIMER ──────────────────────────────────────── */
+    function TimerFace({ remaining, totalSeconds, mode }) {
+      const r            = 75;
+      const circ         = 2 * Math.PI * r;
+      const pct          = Math.max(0, Math.min(1, (totalSeconds - remaining) / totalSeconds));
+      const dashoffset   = circ * (1 - pct);
+      const strokeColor  = mode === "focus" ? "#00d9b1" : "#8b5cf6";
+      return (
+        <div className="timer-wrap">
+          <svg viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5.5"/>
+            <circle cx="90" cy="90" r={r} fill="none"
+              stroke={strokeColor} strokeWidth="5.5" strokeLinecap="round"
+              style={{
+                strokeDasharray: circ,
+                strokeDashoffset: dashoffset,
+                filter: `drop-shadow(0 0 8px ${strokeColor})`,
+                transition: "stroke-dashoffset 0.95s linear, stroke 0.5s ease",
+              }}
+            />
+          </svg>
+          <div className="timer-overlay">
+            <div className="timer-digits">{fmt(remaining)}</div>
+            <div className="timer-mode-lbl">{mode}</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── APP ────────────────────────────────────────────── */
+    function App() {
+      const [state,    setState]    = useState(loadState);
+      const [draft,    setDraft]    = useState("");
+      const [search,   setSearch]   = useState("");
+      const [domF,     setDomF]     = useState("All");
+      const [typeF,    setTypeF]    = useState("All");
+      const [priF,     setPriF]     = useState("All");
+      const [showDone, setShowDone] = useState(false);
+      const [mode,     setMode]     = useState("focus");
+      const [running,  setRunning]  = useState(false);
+      const [remaining,setRemaining]= useState(state.pomodoro.focusMinutes * 60);
+      const [actDomain,setActDomain]= useState("AI/ML");
+      const [projName, setProjName] = useState("");
+      const captureRef = useRef(null);
+
+      useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }, [state]);
+
+      useEffect(() => {
+        const h = e => {
+          if ((e.metaKey||e.ctrlKey) && e.key==="Enter") { e.preventDefault(); submitThought(); }
+          if (e.key==="/" && !["INPUT","TEXTAREA"].includes(document.activeElement.tagName)) {
+            e.preventDefault(); captureRef.current?.focus();
+          }
+        };
+        window.addEventListener("keydown", h);
+        return () => window.removeEventListener("keydown", h);
+      });
+
+      useEffect(() => {
+        if (!running) return;
+        const id = setInterval(() => {
+          setRemaining(prev => {
+            if (prev > 1) return prev - 1;
+            finishSession();
+            return (mode==="focus" ? state.pomodoro.breakMinutes : state.pomodoro.focusMinutes) * 60;
+          });
+        }, 1000);
+        return () => clearInterval(id);
+      }, [running, mode, state.pomodoro]);
+
+      const domains = useMemo(() => {
+        const counts = Object.fromEntries(DOMAINS.map(d => [d,0]));
+        state.thoughts.forEach(t => { counts[t.domain] = (counts[t.domain]||0)+1; });
+        return DOMAINS.map(name => ({ name, count: counts[name]||0 }));
+      }, [state.thoughts]);
+
+      const visible = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return state.thoughts
+          .filter(t => !t.done)
+          .filter(t => domF==="All"  || t.domain===domF)
+          .filter(t => typeF==="All" || t.type===typeF)
+          .filter(t => priF==="All"  || t.priority===priF)
+          .filter(t => !q || [t.text,t.domain,t.type,t.insight,...(t.tags||[])].join(" ").toLowerCase().includes(q))
+          .sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
+      }, [state.thoughts,search,domF,typeF,priF]);
+
+      const done       = state.thoughts.filter(t=>t.done).sort((a,b)=>new Date(b.completedAt||b.createdAt)-new Date(a.completedAt||a.createdAt));
+      const totalSec   = (mode==="focus" ? state.pomodoro.focusMinutes : state.pomodoro.breakMinutes) * 60;
+
+      async function submitThought() {
+        const text = draft.trim();
+        if (!text) return;
+        const id = crypto.randomUUID();
+        const pending = { id, text, domain:"Sorting", type:"note", insight:"Classifying…", priority:"medium", tags:[], status:"pending", done:false, createdAt:new Date().toISOString() };
+        setDraft("");
+        setState(p => ({ ...p, thoughts:[pending,...p.thoughts] }));
+        try {
+          const result = await classifyWithClaude(text, state.apiKey);
+          setState(p => ({ ...p, thoughts:p.thoughts.map(t=>t.id===id?{...t,...result,status:"ready"}:t) }));
+        } catch {
+          const fb = localClassify(text);
+          setState(p => ({ ...p, thoughts:p.thoughts.map(t=>t.id===id?{...t,...fb,status:"local",tags:[...fb.tags,"offline"].slice(0,2)}:t) }));
+        }
+      }
+
+      const updateThought = (id,patch) => setState(p=>({...p,thoughts:p.thoughts.map(t=>t.id===id?{...t,...patch}:t)}));
+      const deleteThought = id         => setState(p=>({...p,thoughts:p.thoughts.filter(t=>t.id!==id)}));
+
+      function finishSession() {
+        setRunning(false);
+        if (mode==="focus") {
+          const since    = new Date(Date.now()-state.pomodoro.focusMinutes*60000).toISOString();
+          const captured = state.thoughts.filter(t=>t.createdAt>=since);
+          setState(p => ({
+            ...p,
+            sessions:[{ id:crypto.randomUUID(), mode:"focus", domain:actDomain, minutes:p.pomodoro.focusMinutes, captured:captured.length, at:new Date().toISOString() },...p.sessions].slice(0,50),
+          }));
+        }
+        const next = mode==="focus" ? "break" : "focus";
+        setMode(next);
+        setRemaining((next==="focus" ? state.pomodoro.focusMinutes : state.pomodoro.breakMinutes)*60);
+      }
+
+      function saveIntention(v) {
+        setState(p => ({
+          ...p, intention:v,
+          intentionHistory: v.trim()
+            ? [{id:crypto.randomUUID(),text:v.trim(),at:new Date().toISOString()},...p.intentionHistory].slice(0,30)
+            : p.intentionHistory,
+        }));
+      }
+
+      return (
+        <main className="app">
+          {/* ── TOPBAR ── */}
+          <header className="topbar">
+            <div>
+              <div className="brand-logo">Polymath OS</div>
+              <div className="brand-sub">capture first · structure emerges</div>
+            </div>
+            <div className="searchbar">
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search thoughts, tags, insights…" />
+              <select value={typeF} onChange={e=>setTypeF(e.target.value)}>{TYPE_OPTS.map(t=><option key={t}>{t}</option>)}</select>
+              <select value={priF}  onChange={e=>setPriF(e.target.value)}>{PRIORITY_OPTS.map(p=><option key={p}>{p}</option>)}</select>
+            </div>
+            <button className="ghost" style={{fontSize:12,color:"var(--muted)",display:"flex",alignItems:"center",gap:8}} onClick={()=>captureRef.current?.focus()}>
+              Quick capture <span className="kbd">/</span>
+            </button>
+          </header>
+
+          <section className="layout">
+            {/* ── LEFT ── */}
+            <div className="stack">
+              <section className="section">
+                <div className="section-head">
+                  <h2>Capture</h2>
+                  <span style={{display:"flex",gap:4,alignItems:"center"}}>
+                    <span className="kbd">Ctrl</span>
+                    <span style={{color:"var(--muted)",fontSize:11}}>+</span>
+                    <span className="kbd">↵</span>
+                  </span>
+                </div>
+                <textarea ref={captureRef} value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Dump the raw thought. No categories, no cleanup." />
+                <div className="capture-actions">
+                  <span className="char-count">{draft.length} chars</span>
+                  <button className="primary" onClick={submitThought}>Capture →</button>
+                </div>
+              </section>
+
+              <section className="section">
+                <div className="section-head">
+                  <h2>Today's Intention</h2>
+                  <span className="int-status">
+                    <span className={`dot ${state.intention?"on":"off"}`}/>
+                    {state.intention?"set":"empty"}
+                  </span>
+                </div>
+                <input
+                  value={state.intention}
+                  onChange={e=>setState(p=>({...p,intention:e.target.value}))}
+                  onBlur={e=>saveIntention(e.target.value)}
+                  placeholder="One sentence for today…"
+                />
+              </section>
+
+              <section className="section">
+                <div className="section-head">
+                  <h2>Domains</h2>
+                  <span className="badge">{state.thoughts.length}</span>
+                </div>
+                <div className="domain-grid">
+                  <div className={`domain-tile ${domF==="All"?"active":""}`} style={{"--dc":"rgba(255,255,255,0.45)"}} onClick={()=>setDomF("All")}>
+                    <strong>All</strong><span>{state.thoughts.length} captured</span>
+                  </div>
+                  {domains.map(d=>(
+                    <div key={d.name} className={`domain-tile ${domF===d.name?"active":""}`} style={{"--dc":DOMAIN_COLOR[d.name]||"var(--accent)"}} onClick={()=>setDomF(d.name)}>
+                      <strong>{d.name}</strong><span>{d.count} captured</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            {/* ── CENTER ── */}
+            <div className="stack">
+              <div>
+                <div className="filters">
+                  <span className={`chip ${domF==="All"?"active":""}`} onClick={()=>setDomF("All")}>All</span>
+                  {DOMAINS.map(d=><span key={d} className={`chip ${domF===d?"active":""}`} onClick={()=>setDomF(d)}>{d}</span>)}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <span style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+                    {visible.length} thought{visible.length!==1?"s":""}
+                  </span>
+                </div>
+                <div className="stream">
+                  {visible.length===0
+                    ? <div className="empty">Nothing matches this view.<br/>Capture something raw or loosen the filters.</div>
+                    : visible.map(t=><ThoughtCard key={t.id} thought={t} updateThought={updateThought} deleteThought={deleteThought}/>)
+                  }
+                </div>
+              </div>
+              <div className="archive">
+                <button className="ghost" style={{fontSize:12,color:"var(--muted)",width:"100%",textAlign:"left"}} onClick={()=>setShowDone(!showDone)}>
+                  {showDone?"▾":"▸"} Archived ({done.length})
+                </button>
+                {showDone&&<div className="stream" style={{marginTop:8}}>
+                  {done.map(t=><ThoughtCard key={t.id} thought={t} updateThought={updateThought} deleteThought={deleteThought}/>)}
+                </div>}
+              </div>
+            </div>
+
+            {/* ── RIGHT ── */}
+            <div className="stack">
+              <section className="section">
+                <div className="section-head">
+                  <h2>Focus Timer</h2>
+                  <select value={actDomain} onChange={e=>setActDomain(e.target.value)} style={{width:108,fontSize:11}}>
+                    {DOMAINS.map(d=><option key={d}>{d}</option>)}
+                  </select>
+                </div>
+                <TimerFace remaining={remaining} totalSeconds={totalSec} mode={mode}/>
+                <div className="timer-controls">
+                  <button className="primary" onClick={()=>setRunning(!running)}>{running?"⏸ Pause":"▶ Start"}</button>
+                  <button onClick={finishSession}>Finish</button>
+                  <button className="icon ghost" title="Reset" onClick={()=>{setRunning(false);setRemaining(totalSec);}}>↺</button>
+                </div>
+              </section>
+
+              <section className="section">
+                <div className="section-head">
+                  <h2>Projects</h2>
+                  <span className="badge">{state.projects.length}</span>
+                </div>
+                {state.projects.map(proj=>(
+                  <div className="project" key={proj.id}>
+                    <div className="project-row">
+                      <strong>{proj.name}</strong>
+                      <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--accent)"}}>{proj.progress}%</span>
+                    </div>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{width:`${proj.progress}%`}}/>
+                    </div>
+                    <input type="range" min="0" max="100" value={proj.progress} onChange={e=>{
+                      const v=Number(e.target.value);
+                      setState(p=>({...p,projects:p.projects.map(x=>x.id===proj.id?{...x,progress:v}:x)}));
+                    }}/>
+                  </div>
+                ))}
+                <div className="mini-form">
+                  <input value={projName} onChange={e=>setProjName(e.target.value)} placeholder="Add project…"/>
+                  <button onClick={()=>{
+                    if(!projName.trim())return;
+                    setState(p=>({...p,projects:[...p.projects,{id:crypto.randomUUID(),name:projName.trim(),progress:0}]}));
+                    setProjName("");
+                  }}>Add</button>
+                </div>
+              </section>
+
+              <section className="section">
+                <div className="section-head">
+                  <h2>Session Log</h2>
+                  <span className="badge">{state.sessions.length}</span>
+                </div>
+                <div className="session-log">
+                  {state.sessions.length===0
+                    ? <div className="empty" style={{padding:"16px 12px"}}>Finished focus sessions appear here.</div>
+                    : state.sessions.map(s=>(
+                        <div className="session-item" key={s.id}>
+                          <strong>{s.domain} · {s.minutes}m</strong>
+                          <div>{new Date(s.at).toLocaleString()} · {s.captured} captured</div>
+                        </div>
+                      ))
+                  }
+                </div>
+              </section>
+
+              <section className="section">
+                <div className="section-head">
+                  <h2>Claude API</h2>
+                  <span className="api-status">
+                    <span className={`dot ${state.apiKey?"on":"off"}`}/>
+                    {state.apiKey?"connected":"local"}
+                  </span>
+                </div>
+                <div className="api-row">
+                  <input type="password" value={state.apiKey} onChange={e=>setState(p=>({...p,apiKey:e.target.value}))} placeholder="sk-ant-…"/>
+                  <button onClick={()=>setState(p=>({...p,apiKey:""}))}>Clear</button>
+                </div>
+                <p className="notice">Without a key, local heuristic classification runs instead. Key is stored only in your browser's localStorage.</p>
+              </section>
+            </div>
+          </section>
+        </main>
+      );
+    }
+
+    /* ─── THOUGHT CARD ───────────────────────────────────── */
+    function ThoughtCard({ thought, updateThought, deleteThought }) {
+      const [editing, setEditing] = useState(false);
+      const [text,    setText]    = useState(thought.text);
+      const color = DOMAIN_COLOR[thought.domain] || "var(--accent)";
+
+      return (
+        <article className={`thought ${thought.done?"done":""}`} style={{"--dc":color}}>
+          <div className="thought-top">
+            <div className="meta">
+              <span className="type-icon" style={{color,opacity:0.8}}>{TYPE_ICON[thought.type]||"·"}</span>
+              <span className="pill dom"  style={{"--dc":color}}>{thought.domain}</span>
+              <span className="pill typ">{thought.type}</span>
+              <span className={`pill ${thought.priority}`}>{thought.priority}</span>
+              {thought.status==="pending"&&<span className="pill pending">classifying…</span>}
+            </div>
+            <div className="thought-actions">
+              {thought.type==="task"&&(
+                <button className="icon" title={thought.done?"Restore":"Mark done"}
+                  style={{color:thought.done?"var(--muted)":"var(--accent)"}}
+                  onClick={()=>updateThought(thought.id,{done:!thought.done,completedAt:!thought.done?new Date().toISOString():null})}>
+                  {thought.done?"↶":"✓"}
+                </button>
+              )}
+              <button className="icon ghost" title="Edit"   onClick={()=>setEditing(!editing)}>✎</button>
+              <button className="icon danger" title="Delete" onClick={()=>deleteThought(thought.id)}>×</button>
+            </div>
+          </div>
+
+          {editing
+            ? <div className="edit-box">
+                <textarea value={text} onChange={e=>setText(e.target.value)}/>
+                <button className="primary" onClick={()=>{updateThought(thought.id,{text});setEditing(false);}}>Save</button>
+              </div>
+            : <p className="thought-text">{thought.text}</p>
+          }
+
+          <div className="meta">
+            <span className="pill" style={{opacity:0.65,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{thought.insight}</span>
+            {(thought.tags||[]).map(tag=><span className="pill" key={tag}>#{tag}</span>)}
+            <span className="pill" style={{marginLeft:"auto",fontSize:9,opacity:0.6}}>
+              {new Date(thought.createdAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
+            </span>
+          </div>
+        </article>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
