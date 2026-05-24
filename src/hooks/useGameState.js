@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { DOMAINS, STORAGE_KEY, STORAGE_V1, DEFAULT_HABITS, TIER_XP } from '../constants/index.js';
+import { DOMAINS, STORAGE_KEY, STORAGE_V1, DEFAULT_HABITS, TIER_XP, IDENTITY_MODES } from '../constants/index.js';
 import {
   todayStr, refreshQuests, updateStreak, advanceQuests, questBonusXP,
   findNewAchs, xpToLevel,
@@ -14,6 +14,8 @@ const SEED = {
   ],
   intention: '', intentionHistory: [], sessions: [], apiKey: '',
   pomodoro: { focusMinutes: 25, breakMinutes: 5 },
+  domainList: DOMAINS,
+  todos: [],
   xp: Object.fromEntries(DOMAINS.map(d => [d, 0])),
   streak: { count: 0, lastDate: null },
   achievements: [],
@@ -23,6 +25,7 @@ const SEED = {
   energyLog: [],
   questlines: [],
   bosses: [],
+  identityModes: IDENTITY_MODES,
 };
 
 function loadState() {
@@ -38,6 +41,9 @@ function loadState() {
         energyLog: s.energyLog || [],
         questlines: s.questlines || [],
         bosses: s.bosses || [],
+        identityModes: s.identityModes?.length ? s.identityModes : IDENTITY_MODES,
+        domainList: s.domainList?.length ? s.domainList : DOMAINS,
+        todos: s.todos || [],
       };
     }
     const old = JSON.parse(localStorage.getItem(STORAGE_V1) || 'null');
@@ -124,10 +130,11 @@ export function useGameState() {
   }
 
   const domains = useMemo(() => {
-    const c = Object.fromEntries(DOMAINS.map(d => [d, 0]));
+    const list = state.domainList || DOMAINS;
+    const c = {};
     state.thoughts.forEach(t => { c[t.domain] = (c[t.domain] || 0) + 1; });
-    return DOMAINS.map(name => ({ name, count: c[name] || 0 }));
-  }, [state.thoughts]);
+    return list.map(name => ({ name, count: c[name] || 0 }));
+  }, [state.thoughts, state.domainList]);
 
   async function submitThought(text, apiKey) {
     if (!text.trim()) return;
@@ -345,6 +352,90 @@ export function useGameState() {
 
   const deleteBoss = id => setState(p => ({ ...p, bosses: (p.bosses || []).filter(b => b.id !== id) }));
 
+  const TODO_XP = { 1: 30, 2: 20, 3: 15, 4: 10 };
+
+  function addTodo({ text, priority = 2, estimate = null }) {
+    const today = new Date().toISOString().split('T')[0];
+    setState(p => ({
+      ...p,
+      todos: [
+        { id: crypto.randomUUID(), text, priority, estimate, done: false, doneAt: null, createdAt: new Date().toISOString(), date: today, subtasks: [] },
+        ...(p.todos || []),
+      ],
+    }));
+  }
+
+  function toggleTodo(id) {
+    setState(p => {
+      const todo = (p.todos || []).find(t => t.id === id);
+      if (!todo) return p;
+      const nowDone = !todo.done;
+      const newTodos = p.todos.map(t => t.id === id ? { ...t, done: nowDone, doneAt: nowDone ? new Date().toISOString() : null } : t);
+      if (!nowDone) return { ...p, todos: newTodos };
+      return applyGame({ ...p, todos: newTodos }, 'Life', 'tasks', TODO_XP[todo.priority] || 15);
+    });
+  }
+
+  const deleteTodo = id => setState(p => ({ ...p, todos: (p.todos || []).filter(t => t.id !== id) }));
+
+  function addSubtask(todoId, text) {
+    setState(p => ({
+      ...p,
+      todos: (p.todos || []).map(t => t.id === todoId
+        ? { ...t, subtasks: [...(t.subtasks || []), { id: crypto.randomUUID(), text, done: false }] }
+        : t),
+    }));
+  }
+
+  function toggleSubtask(todoId, subId) {
+    setState(p => ({
+      ...p,
+      todos: (p.todos || []).map(t => t.id !== todoId ? t : {
+        ...t,
+        subtasks: (t.subtasks || []).map(s => s.id === subId ? { ...s, done: !s.done } : s),
+      }),
+    }));
+  }
+
+  function deleteSubtask(todoId, subId) {
+    setState(p => ({
+      ...p,
+      todos: (p.todos || []).map(t => t.id !== todoId ? t : {
+        ...t,
+        subtasks: (t.subtasks || []).filter(s => s.id !== subId),
+      }),
+    }));
+  }
+
+  function addDomain(name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setState(p => {
+      const list = p.domainList || DOMAINS;
+      if (list.includes(trimmed)) return p;
+      return { ...p, domainList: [...list, trimmed], xp: { ...p.xp, [trimmed]: 0 } };
+    });
+  }
+
+  function deleteDomain(name) {
+    setState(p => {
+      const list = p.domainList || DOMAINS;
+      if (list.length <= 1) return p;
+      return { ...p, domainList: list.filter(d => d !== name) };
+    });
+  }
+
+  function addIdentityMode(mode) {
+    setState(p => ({ ...p, identityModes: [...(p.identityModes || IDENTITY_MODES), mode] }));
+  }
+
+  function deleteIdentityMode(id) {
+    setState(p => {
+      const next = (p.identityModes || IDENTITY_MODES).filter(m => m.id !== id);
+      return { ...p, identityModes: next.length ? next : p.identityModes };
+    });
+  }
+
   function saveForge({ text, insight, domain, tags, type, priority }) {
     setState(p => {
       const thought = {
@@ -378,5 +469,9 @@ export function useGameState() {
     addQuestline, completeQuestlineQuest, deleteQuestline,
     addBoss, completeBossPhase, deleteBoss,
     saveForge,
+    addIdentityMode, deleteIdentityMode,
+    addDomain, deleteDomain,
+    addTodo, toggleTodo, deleteTodo,
+    addSubtask, toggleSubtask, deleteSubtask,
   };
 }

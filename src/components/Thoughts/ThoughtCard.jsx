@@ -6,16 +6,25 @@ function getAgeDays(createdAt) {
   return Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000);
 }
 
-export default function ThoughtCard({ thought, updateThought, deleteThought }) {
+export default function ThoughtCard({ thought, updateThought, deleteThought, index = 0, isExiting = false }) {
   const [editing, setEditing] = useState(false);
   const [text, setText]       = useState(thought.text);
   const color = DOMAIN_COLOR[thought.domain] || 'var(--accent)';
 
-  const ageDays = thought.done ? 0 : getAgeDays(thought.createdAt);
-  const ageClass = ageDays >= 7 ? ' aged-critical' : ageDays >= 3 ? ' aged-warn' : '';
+  const ageDays   = thought.done ? 0 : getAgeDays(thought.createdAt);
+  const ageFactor = thought.done ? 0 : Math.min(1, ageDays / 14);
+  const ageClass  = ageDays >= 7 ? ' aged-critical' : ageDays >= 3 ? ' aged-warn' : '';
 
   return (
-    <article className={`thought${thought.done ? ' done' : ''}${ageClass}`} style={{ '--dc': color }}>
+    <article
+      className={`thought${thought.done ? ' done' : ''}${ageClass}${isExiting ? ' is-exiting' : ''}`}
+      style={{
+        '--dc':         color,
+        '--age-factor': ageFactor.toFixed(3),
+        '--snap-delay': `${Math.min(index, 8) * 38}ms`,
+      }}
+      data-priority={thought.priority}
+    >
       <div className="thought-top">
         <div className="meta">
           <span className="type-icon" style={{ color, opacity: 0.8 }}>

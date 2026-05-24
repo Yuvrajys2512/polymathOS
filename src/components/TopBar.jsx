@@ -1,43 +1,49 @@
-import { TYPE_OPTS, PRIORITY_OPTS } from '../constants/index.js';
+import { DOMAINS } from '../constants/index.js';
+import { xpToLevel, polymathScore } from '../utils/game.js';
+import { calcMomentumScore, getMomentumTrend, getMomentumMeta } from '../utils/momentum.js';
 
-export default function TopBar({ search, setSearch, typeF, setTypeF, priF, setPriF, onCaptureRef, onChaos, onBrainMap, onForge }) {
+export default function TopBar({ state, onChaos }) {
+  const totalXp   = DOMAINS.reduce((s, d) => s + (state.xp?.[d] || 0), 0);
+  const maxLevel  = Math.max(...DOMAINS.map(d => xpToLevel(state.xp?.[d] || 0)));
+  const score     = polymathScore(state.xp);
+  const momentum  = calcMomentumScore(state.thoughts, state.taskBoard, state.sessions);
+  const trend     = getMomentumTrend(state.thoughts, state.taskBoard, state.sessions);
+  const momMeta   = getMomentumMeta(momentum, trend, false);
+
   return (
     <header className="topbar">
-      <div>
+      <div className="brand">
         <div className="brand-logo">Polymath OS</div>
         <div className="brand-sub">capture first · level up · embrace the chaos</div>
       </div>
-      <div className="topbar-center">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search thoughts, tags, insights…"
-        />
-        <select value={typeF} onChange={e => setTypeF(e.target.value)}>
-          {TYPE_OPTS.map(t => <option key={t}>{t}</option>)}
-        </select>
-        <select value={priF} onChange={e => setPriF(e.target.value)}>
-          {PRIORITY_OPTS.map(p => <option key={p}>{p}</option>)}
-        </select>
+
+      <div className="topbar-stats">
+        <div className="stat-pill">
+          <span className="stat-pill-label">XP</span>
+          <span className="stat-pill-value">{totalXp.toLocaleString()}</span>
+        </div>
+        <div className="stat-pill">
+          <span className="stat-pill-label">LEVEL</span>
+          <span className="stat-pill-value">{maxLevel}</span>
+        </div>
+        <div className="stat-pill">
+          <span className="stat-pill-label">SCORE</span>
+          <span className="stat-pill-value">{score.toLocaleString()}</span>
+        </div>
+        <div className="stat-pill momentum-pill" style={{ '--mom-color': momMeta.color }}>
+          <span className="stat-pill-label">MOMENTUM</span>
+          <span className="stat-pill-value momentum-val">
+            {momentum}%
+            <span className="momentum-trend" style={{ color: momMeta.trendColor }}>
+              {momMeta.trendIcon}
+            </span>
+          </span>
+        </div>
       </div>
-      <div className="topbar-right">
-        <button
-          className="ghost"
-          style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 8 }}
-          onClick={onCaptureRef}
-        >
-          Quick capture <span className="kbd">/</span>
-        </button>
-        <button className="forge-topbar-btn" onClick={onForge}>
-          ✦ Forge
-        </button>
-        <button className="brain-map-btn" onClick={onBrainMap}>
-          ◈ Brain Map
-        </button>
-        <button className="chaos-trigger" onClick={onChaos}>
-          ⚡ Overwhelmed
-        </button>
-      </div>
+
+      <button className="chaos-trigger" onClick={onChaos}>
+        ⚡ Overwhelmed
+      </button>
     </header>
   );
 }
