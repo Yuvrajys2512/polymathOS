@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { TYPE_OPTS, PRIORITY_OPTS } from '../constants/index.js';
 import ThoughtCard from '../components/Thoughts/ThoughtCard.jsx';
+import ThoughtGraph from '../components/Thoughts/ThoughtGraph.jsx';
 import TriageMode from '../components/Triage/TriageMode.jsx';
 
 export default function ThoughtsView({
@@ -13,14 +14,15 @@ export default function ThoughtsView({
   showDone, setShowDone,
   updateThought, deleteThought,
   onStartFocus,
+  groqKey,
 }) {
   const [filterVersion, setFilterVersion] = useState(0);
   const [exiting,       setExiting]       = useState([]);
   const [triageOpen,    setTriageOpen]    = useState(false);
+  const [viewMode,      setViewMode]      = useState('list'); // 'list' | 'graph'
   const prevVisibleRef = useRef(visible);
   const exitTimerRef   = useRef(null);
 
-  // Capture leaving thoughts before they're removed from DOM
   useEffect(() => {
     const prev = prevVisibleRef.current;
     prevVisibleRef.current = visible;
@@ -32,7 +34,6 @@ export default function ThoughtsView({
     return () => clearTimeout(exitTimerRef.current);
   }, [visible]);
 
-  // Wrap filter setters to trigger magnetic animation
   function handleDomF(v)  { setDomF(v);  setFilterVersion(fv => fv + 1); }
   function handleTypeF(v) { setTypeF(v); setFilterVersion(fv => fv + 1); }
   function handlePriF(v)  { setPriF(v);  setFilterVersion(fv => fv + 1); }
@@ -50,11 +51,31 @@ export default function ThoughtsView({
         />
       )}
 
-      <div className="view-header">
-        <span className="view-title">THOUGHTS</span>
-        <span className="thoughts-count view-hint">
-          {visible.length} thought{visible.length !== 1 ? 's' : ''}
-        </span>
+      <div className="view-header thoughts-view-header">
+        <div className="tvh-left">
+          <span className="view-title">THOUGHTS</span>
+          <span className="thoughts-count view-hint">
+            {visible.length} thought{visible.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* View mode toggle */}
+        <div className="tv-toggle">
+          <button
+            className={`tvt-btn${viewMode === 'list' ? ' active' : ''}`}
+            onClick={() => setViewMode('list')}
+            title="List view"
+          >
+            ≡ LIST
+          </button>
+          <button
+            className={`tvt-btn${viewMode === 'graph' ? ' active' : ''}`}
+            onClick={() => setViewMode('graph')}
+            title="3D knowledge graph"
+          >
+            ◈ GRAPH
+          </button>
+        </div>
       </div>
 
       <div className="thoughts-filters">
@@ -101,52 +122,66 @@ export default function ThoughtsView({
         </div>
       </div>
 
-      <div className="stream">
-        {/* Blast-out: thoughts that just got filtered away */}
-        {exiting.map(t => (
-          <ThoughtCard
-            key={t.id + '-exit'}
-            thought={t}
-            updateThought={updateThought}
-            deleteThought={deleteThought}
-            isExiting
-          />
-        ))}
+      {/* ── GRAPH VIEW ── */}
+      {viewMode === 'graph' && (
+        <ThoughtGraph
+          thoughts={visible}
+          updateThought={updateThought}
+          deleteThought={deleteThought}
+          groqKey={groqKey}
+        />
+      )}
 
-        {visible.length === 0 ? (
-          <div className="empty">
-            Nothing matches this view.<br />
-            Capture something raw or loosen the filters.
-          </div>
-        ) : visible.map((t, i) => (
-          <ThoughtCard
-            key={t.id + '-' + filterVersion}
-            thought={t}
-            index={i}
-            updateThought={updateThought}
-            deleteThought={deleteThought}
-          />
-        ))}
-      </div>
-
-      <div className="archive">
-        <button
-          className="ghost"
-          style={{ fontSize: 12, color: 'var(--muted)', width: '100%', textAlign: 'left' }}
-          onClick={() => setShowDone(!showDone)}
-        >
-          {showDone ? '▾' : '▸'} Archived ({done.length})
-        </button>
-        {showDone && (
-          <div className="stream" style={{ marginTop: 8 }}>
-            {done.map(t => (
-              <ThoughtCard key={t.id} thought={t}
+      {/* ── LIST VIEW ── */}
+      {viewMode === 'list' && (
+        <>
+          <div className="stream">
+            {exiting.map(t => (
+              <ThoughtCard
+                key={t.id + '-exit'}
+                thought={t}
                 updateThought={updateThought}
-                deleteThought={deleteThought} />
+                deleteThought={deleteThought}
+                isExiting
+              />
+            ))}
+
+            {visible.length === 0 ? (
+              <div className="empty">
+                Nothing matches this view.<br />
+                Capture something raw or loosen the filters.
+              </div>
+            ) : visible.map((t, i) => (
+              <ThoughtCard
+                key={t.id + '-' + filterVersion}
+                thought={t}
+                index={i}
+                updateThought={updateThought}
+                deleteThought={deleteThought}
+              />
             ))}
           </div>
-        )}
-      </div>
+
+          <div className="archive">
+            <button
+              className="ghost"
+              style={{ fontSize: 12, color: 'var(--muted)', width: '100%', textAlign: 'left' }}
+              onClick={() => setShowDone(!showDone)}
+            >
+              {showDone ? '▾' : '▸'} Archived ({done.length})
+            </button>
+            {showDone && (
+              <div className="stream" style={{ marginTop: 8 }}>
+                {done.map(t => (
+                  <ThoughtCard key={t.id} thought={t}
+                    updateThought={updateThought}
+                    deleteThought={deleteThought} />
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

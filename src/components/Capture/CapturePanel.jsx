@@ -4,7 +4,7 @@ import { triggerCaptureParticles } from '../../utils/captureParticles.js';
 
 const ROUTING_DELAY = 380;
 
-export default function CapturePanel({ onSubmit, captureRef, apiKey }) {
+export default function CapturePanel({ onSubmit, captureRef, apiKey, placeholder }) {
   const [draft,         setDraft]         = useState('');
   const [isFocused,     setIsFocused]     = useState(false);
   const [routingState,  setRoutingState]  = useState('idle');
@@ -60,7 +60,7 @@ export default function CapturePanel({ onSubmit, captureRef, apiKey }) {
         onKeyDown={e => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handle(); }
         }}
-        placeholder="Dump the raw thought. No categories, no cleanup."
+        placeholder={placeholder || "Dump the raw thought. No categories, no cleanup."}
       />
 
       {/* Agentic routing terminal */}

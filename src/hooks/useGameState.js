@@ -12,7 +12,7 @@ const SEED = {
     { id: crypto.randomUUID(), name: 'Build POLYMATH OS', progress: 20 },
     { id: crypto.randomUUID(), name: 'Define active research threads', progress: 10 },
   ],
-  intention: '', intentionHistory: [], sessions: [], apiKey: '',
+  intention: '', intentionHistory: [], sessions: [], apiKey: '', groqKey: '',
   pomodoro: { focusMinutes: 25, breakMinutes: 5 },
   domainList: DOMAINS,
   todos: [],
@@ -268,7 +268,8 @@ export function useGameState() {
     setState(p => ({ ...p, pomodoro: { ...p.pomodoro, focusMinutes } }));
   }
 
-  const setApiKey = key => setState(p => ({ ...p, apiKey: key }));
+  const setApiKey  = key => setState(p => ({ ...p, apiKey: key }));
+  const setGroqKey = key => setState(p => ({ ...p, groqKey: key }));
 
   function addProject(name) {
     setState(p => ({ ...p, projects: [...p.projects, { id: crypto.randomUUID(), name, progress: 0 }] }));
@@ -463,7 +464,7 @@ export function useGameState() {
     toggleHabit, addHabit,
     setEnergy,
     setPomodoro,
-    setApiKey,
+    setApiKey, setGroqKey,
     addProject, updateProjectProgress,
     spawnFloat,
     addQuestline, completeQuestlineQuest, deleteQuestline,

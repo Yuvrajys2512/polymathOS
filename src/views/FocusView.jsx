@@ -1,6 +1,11 @@
 import FocusTimer from '../components/Timer/FocusTimer.jsx';
 
-export default function FocusView({ actDomain, setActDomain, domains, timer, sessions, identityModes, addIdentityMode, deleteIdentityMode, addDomain, deleteDomain }) {
+export default function FocusView({
+  actDomain, setActDomain, domains, timer, sessions,
+  identityModes, addIdentityMode, deleteIdentityMode,
+  addDomain, deleteDomain,
+  submitThought, apiKey,
+}) {
   return (
     <div className="focus-view">
       <div className="view-header">
@@ -18,6 +23,8 @@ export default function FocusView({ actDomain, setActDomain, domains, timer, ses
         deleteIdentityMode={deleteIdentityMode}
         addDomain={addDomain}
         deleteDomain={deleteDomain}
+        submitThought={submitThought}
+        apiKey={apiKey}
       />
     </div>
   );

@@ -8,12 +8,14 @@ export function useTimer(defaultMinutes, onFinish) {
   const [focusMinutes,  setFocusMinutes]  = useState(defaultMinutes);
   const [identityMode,  setIdentityMode]  = useState(IDENTITY_MODES[0]);
   const [pausedThisSession, setPausedThisSession] = useState(false);
+  const [pauseCount,    setPauseCount]    = useState(0);
   const [lootPending,   setLootPending]   = useState(false);
 
   const modeRef = useRef(mode);
   modeRef.current = mode;
 
   const totalSec = (mode === 'focus' ? focusMinutes : 5) * 60;
+  const elapsedFocusSec = mode === 'focus' ? Math.max(0, totalSec - remaining) : 0;
 
   useEffect(() => {
     if (!running) return;
@@ -22,7 +24,6 @@ export function useTimer(defaultMinutes, onFinish) {
         if (prev > 1) return prev - 1;
         const currentMode = modeRef.current;
         onFinish(currentMode, focusMinutes, identityMode);
-        // Natural finish — award loot if no pauses during focus
         if (currentMode === 'focus') {
           setLootPending(p => p || true);
         }
@@ -30,6 +31,7 @@ export function useTimer(defaultMinutes, onFinish) {
         setMode(next);
         setRunning(false);
         setPausedThisSession(false);
+        setPauseCount(0);
         return (next === 'focus' ? focusMinutes : 5) * 60;
       });
     }, 1000);
@@ -49,7 +51,10 @@ export function useTimer(defaultMinutes, onFinish) {
 
   function toggleRunning() {
     setRunning(r => {
-      if (r) setPausedThisSession(true); // user is pausing
+      if (r) {
+        setPausedThisSession(true);
+        setPauseCount(c => c + 1);
+      }
       return !r;
     });
   }
@@ -59,6 +64,7 @@ export function useTimer(defaultMinutes, onFinish) {
     setRemaining(focusMinutes * 60);
     setMode('focus');
     setPausedThisSession(false);
+    setPauseCount(0);
   }
 
   function forceFinish() {
@@ -68,8 +74,8 @@ export function useTimer(defaultMinutes, onFinish) {
     setMode(next);
     setRunning(false);
     setPausedThisSession(false);
+    setPauseCount(0);
     setRemaining((next === 'focus' ? focusMinutes : 5) * 60);
-    // No loot on force-finish — they skipped it
   }
 
   function clearLoot() { setLootPending(false); }
@@ -81,12 +87,14 @@ export function useTimer(defaultMinutes, onFinish) {
     setMode('focus');
     setRunning(true);
     setPausedThisSession(false);
+    setPauseCount(0);
   }
 
   return {
     mode, running, remaining, totalSec,
     focusMinutes, identityMode,
-    pausedThisSession, lootPending, clearLoot,
+    pausedThisSession, pauseCount, elapsedFocusSec,
+    lootPending, clearLoot,
     setIdentityMode,
     toggleRunning, reset, forceFinish,
     adjustFocus, selectPreset,

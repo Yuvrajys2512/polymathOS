@@ -45,27 +45,52 @@ export default function CharacterView({ game }) {
 
 function ApiKeyPanel({ game }) {
   return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2>Claude API</h2>
-        <span className="api-status">
-          <span className={`dot ${game.state.apiKey ? 'on' : 'off'}`} />
-          {game.state.apiKey ? 'connected' : 'local'}
-        </span>
-      </div>
-      <div className="api-row">
-        <input
-          type="password"
-          value={game.state.apiKey}
-          onChange={e => game.setApiKey(e.target.value)}
-          placeholder="sk-ant-…"
-        />
-        <button onClick={() => game.setApiKey('')}>Clear</button>
-      </div>
-      <p className="notice">
-        Without a key, local heuristic classification runs instead.
-        Stored only in your browser's localStorage.
-      </p>
-    </section>
+    <>
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Claude API</h2>
+          <span className="api-status">
+            <span className={`dot ${game.state.apiKey ? 'on' : 'off'}`} />
+            {game.state.apiKey ? 'connected' : 'local'}
+          </span>
+        </div>
+        <div className="api-row">
+          <input
+            type="password"
+            value={game.state.apiKey}
+            onChange={e => game.setApiKey(e.target.value)}
+            placeholder="sk-ant-…"
+          />
+          <button onClick={() => game.setApiKey('')}>Clear</button>
+        </div>
+        <p className="notice">
+          Used for thought classification. Without a key, local heuristics run instead.
+          Stored only in your browser.
+        </p>
+      </section>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Groq AI</h2>
+          <span className="api-status">
+            <span className={`dot ${game.state.groqKey ? 'on' : 'off'}`} />
+            {game.state.groqKey ? 'connected' : 'off'}
+          </span>
+        </div>
+        <div className="api-row">
+          <input
+            type="password"
+            value={game.state.groqKey}
+            onChange={e => game.setGroqKey(e.target.value)}
+            placeholder="gsk_…"
+          />
+          <button onClick={() => game.setGroqKey('')}>Clear</button>
+        </div>
+        <p className="notice">
+          Powers knowledge graph clustering and node synthesis (free tier at console.groq.com).
+          Stored only in your browser.
+        </p>
+      </section>
+    </>
   );
 }

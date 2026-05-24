@@ -117,6 +117,8 @@ function MainApp() {
                 deleteIdentityMode={game.deleteIdentityMode}
                 addDomain={game.addDomain}
                 deleteDomain={game.deleteDomain}
+                submitThought={game.submitThought}
+                apiKey={game.state.apiKey}
               />
             )}
             {activeView === 'thoughts' && (
@@ -132,6 +134,7 @@ function MainApp() {
                 updateThought={game.updateThought}
                 deleteThought={game.deleteThought}
                 onStartFocus={() => setActiveView('focus')}
+                groqKey={game.state.groqKey}
               />
             )}
             {activeView === 'todo' && (
