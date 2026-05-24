@@ -7,7 +7,6 @@ import { calcMomentumScore } from './utils/momentum.js';
 import LandingPage    from './components/Landing/LandingPage.jsx';
 import TopBar         from './components/TopBar.jsx';
 import Sidebar        from './components/Sidebar/Sidebar.jsx';
-import TodoPanel      from './components/TodoPanel/TodoPanel.jsx';
 import ChaosMode      from './components/ChaosMode/ChaosMode.jsx';
 import BrainMap       from './components/BrainMap/BrainMap.jsx';
 import Forge          from './components/Forge/Forge.jsx';
@@ -19,8 +18,10 @@ import XpFloats       from './components/shared/XpFloats.jsx';
 import HomeView       from './views/HomeView.jsx';
 import FocusView      from './views/FocusView.jsx';
 import ThoughtsView   from './views/ThoughtsView.jsx';
+import TodoView       from './views/TodoView.jsx';
 import QuestsView     from './views/QuestsView.jsx';
 import CharacterView  from './views/CharacterView.jsx';
+import ProfileView    from './views/ProfileView.jsx';
 
 function MainApp() {
   const game       = useGameState();
@@ -36,7 +37,6 @@ function MainApp() {
   const [chaosOpen,    setChaosOpen]    = useState(false);
   const [brainMapOpen, setBrainMapOpen] = useState(false);
   const [forgeOpen,    setForgeOpen]    = useState(false);
-  const [todoOpen,     setTodoOpen]     = useState(false);
   const [briefOpen,    setBriefOpen]    = useState(() => {
     const seen = localStorage.getItem('polymath-brief-seen');
     return seen !== new Date().toISOString().split('T')[0];
@@ -91,8 +91,6 @@ function MainApp() {
           onNav={v => { if (!timer.running) setActiveView(v); }}
           onForge={() => setForgeOpen(true)}
           onBrainMap={() => setBrainMapOpen(true)}
-          onTodo={() => setTodoOpen(o => !o)}
-          todoOpen={todoOpen}
           focusLocked={timer.running && activeView === 'focus'}
           todoPendingCount={(game.state.todos || []).filter(t => !t.done && t.date === new Date().toISOString().split('T')[0]).length}
         />
@@ -136,32 +134,29 @@ function MainApp() {
                 onStartFocus={() => setActiveView('focus')}
               />
             )}
+            {activeView === 'todo' && (
+              <TodoView
+                state={game.state}
+                addTodo={game.addTodo}
+                toggleTodo={game.toggleTodo}
+                deleteTodo={game.deleteTodo}
+                addSubtask={game.addSubtask}
+                toggleSubtask={game.toggleSubtask}
+                deleteSubtask={game.deleteSubtask}
+              />
+            )}
             {activeView === 'quests' && (
               <QuestsView game={game} />
             )}
             {activeView === 'character' && (
               <CharacterView game={game} />
             )}
+            {activeView === 'profile' && (
+              <ProfileView state={game.state} />
+            )}
           </div>
         </div>
       </div>
-
-      {/* Todo Panel */}
-      {todoOpen && (
-        <>
-          <div className="todo-backdrop" onClick={() => setTodoOpen(false)} />
-          <TodoPanel
-            state={game.state}
-            addTodo={game.addTodo}
-            toggleTodo={game.toggleTodo}
-            deleteTodo={game.deleteTodo}
-            addSubtask={game.addSubtask}
-            toggleSubtask={game.toggleSubtask}
-            deleteSubtask={game.deleteSubtask}
-            onClose={() => setTodoOpen(false)}
-          />
-        </>
-      )}
 
       {/* Overlays */}
       {forgeOpen && (

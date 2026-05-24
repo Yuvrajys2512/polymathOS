@@ -2,16 +2,18 @@ const NAV = [
   { id: 'home',      icon: '⌂', label: 'Home'     },
   { id: 'focus',     icon: '◉', label: 'Focus'    },
   { id: 'thoughts',  icon: '☁', label: 'Thoughts' },
+  { id: 'todo',      icon: '☑', label: 'To-Do'    },
   { id: 'quests',    icon: '⚔', label: 'Quests'   },
   { id: 'character', icon: '◆', label: 'Profile'  },
 ];
 
 const OVERLAYS = [
-  { id: 'forge',    icon: '✦', label: 'Forge'    },
-  { id: 'brainmap', icon: '◎', label: 'Map'      },
+  { id: 'forge',    icon: '✦', label: 'Forge',   kind: 'overlay' },
+  { id: 'brainmap', icon: '◎', label: 'Map',     kind: 'overlay' },
+  { id: 'profile',  icon: '◈', label: 'Profile', kind: 'nav'     },
 ];
 
-export default function Sidebar({ activeView, onNav, onForge, onBrainMap, onTodo, todoOpen, focusLocked, todoPendingCount }) {
+export default function Sidebar({ activeView, onNav, onForge, onBrainMap, focusLocked, todoPendingCount }) {
   function handleOverlay(id) {
     if (id === 'forge')    onForge();
     if (id === 'brainmap') onBrainMap();
@@ -27,7 +29,12 @@ export default function Sidebar({ activeView, onNav, onForge, onBrainMap, onTodo
             onClick={() => onNav(item.id)}
             title={item.label}
           >
-            <span className="sidebar-icon">{item.icon}</span>
+            <span className="sidebar-icon" style={{ position: 'relative' }}>
+              {item.icon}
+              {item.id === 'todo' && todoPendingCount > 0 && (
+                <span className="todo-badge">{todoPendingCount > 9 ? '9+' : todoPendingCount}</span>
+              )}
+            </span>
             <span className="sidebar-label">{item.label}</span>
           </button>
         ))}
@@ -35,29 +42,12 @@ export default function Sidebar({ activeView, onNav, onForge, onBrainMap, onTodo
 
       <div className="sidebar-divider" />
 
-      {/* Todo drawer button */}
-      <button
-        className={`sidebar-item todo-sidebar-btn${todoOpen ? ' active' : ''}`}
-        onClick={onTodo}
-        title="Daily To-Do"
-      >
-        <span className="sidebar-icon" style={{ position: 'relative' }}>
-          ☑
-          {todoPendingCount > 0 && (
-            <span className="todo-badge">{todoPendingCount > 9 ? '9+' : todoPendingCount}</span>
-          )}
-        </span>
-        <span className="sidebar-label">To-Do</span>
-      </button>
-
-      <div className="sidebar-divider" />
-
       <div className="sidebar-overlays">
         {OVERLAYS.map(item => (
           <button
             key={item.id}
-            className="sidebar-item overlay"
-            onClick={() => handleOverlay(item.id)}
+            className={`sidebar-item overlay${item.kind === 'nav' && activeView === item.id ? ' active' : ''}`}
+            onClick={() => item.kind === 'nav' ? onNav(item.id) : handleOverlay(item.id)}
             title={item.label}
           >
             <span className="sidebar-icon">{item.icon}</span>

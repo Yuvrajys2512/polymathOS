@@ -427,6 +427,7 @@ HOME MAIN AREA:
 | 2026-05-24 | Moved Habits to Character view | Secondary daily action; energy check-in stays accessible via topbar pill |
 | 2026-05-24 | Made Capture the hero element on home | #1 user action must have #1 visual weight |
 | 2026-05-24 | Added sidebar navigation | The core structural change that makes everything else possible |
+| 2026-05-24 | Specced AI Feature Builder for v2 | Users want to extend the app for their own workflows without code |
 
 ---
 
@@ -453,4 +454,300 @@ Before any code: this document must be agreed on.
 5. View transition animations
 
 **Phase 3 — New Features (after UX is solid):**
-- TBD — to be proposed after Phase 1 + 2 are live and reviewed
+- AI Feature Builder (see Section 10)
+- To be extended as Phase 1 + 2 are reviewed
+
+---
+
+## 10. V2 — AI Feature Builder
+
+### 10.1 What It Is
+
+A tab inside POLYMATH OS where the user describes a feature or workflow they need, and the AI builds it — live, inside the app — without any code.
+
+**What it is NOT:**
+- A code editor or IDE
+- A way to modify existing views/features
+- Unrestricted code execution
+
+**Core promise:**
+"If you can describe it, POLYMATH OS can build it for you. Your app grows with your brain."
+
+**ADHD fit:**
+Power users with ADHD often need hyper-specific workflows that no app ships by default. A water tracker, a reading log, a mood-to-domain mapper, a custom daily ritual. Instead of switching apps, they extend this one.
+
+---
+
+### 10.2 Architecture Decision: JSON-Schema Driven (Not Raw Code)
+
+**Chosen approach:** AI generates structured JSON config → app renders it via a WidgetRenderer.
+
+**Why not raw code generation:**
+- Security: arbitrary JS execution in the browser is dangerous
+- Stability: generated code can break the rest of the app
+- Debugging: broken JSON is recoverable; broken code is not
+- Portability: JSON config is storable, shareable, versionable in localStorage
+
+**The tradeoff accepted:**
+Features are limited to what the schema supports. If a user wants something the schema can't express, we tell them clearly and expand the schema in future versions.
+
+---
+
+### 10.3 The Widget Schema
+
+Every AI-generated feature is a `CustomWidget` object:
+
+```json
+{
+  "id": "uuid",
+  "name": "Water Tracker",
+  "description": "Log glasses of water toward a daily goal",
+  "createdAt": "ISO string",
+  "type": "counter | checklist | log | rating | toggle-group | timer | note",
+  "icon": "💧",
+  "color": "#38bdf8",
+  "domain": "Health",
+  "xpEnabled": true,
+  "xpPerAction": 5,
+  "config": { /* type-specific, see below */ },
+  "data": { /* runtime state, persisted to localStorage */ }
+}
+```
+
+**Widget types and their configs:**
+
+#### `counter`
+Track a number toward a daily/weekly goal.
+```json
+{
+  "type": "counter",
+  "config": {
+    "unit": "glasses",
+    "goal": 8,
+    "resetCadence": "daily",
+    "incrementBy": 1
+  }
+}
+```
+
+#### `checklist`
+A fixed list of items to check off. Resets on cadence.
+```json
+{
+  "type": "checklist",
+  "config": {
+    "items": ["Morning pages", "Cold shower", "No phone first hour"],
+    "resetCadence": "daily"
+  }
+}
+```
+
+#### `log`
+Free-text log entries with optional tags. Like a mini journal.
+```json
+{
+  "type": "log",
+  "config": {
+    "placeholder": "What did you read today?",
+    "tags": ["fiction", "non-fiction", "articles"],
+    "showCount": true
+  }
+}
+```
+
+#### `rating`
+Rate something on a scale. Logged over time.
+```json
+{
+  "type": "rating",
+  "config": {
+    "label": "Sleep quality",
+    "scale": 5,
+    "style": "stars | dots | numbers",
+    "resetCadence": "daily"
+  }
+}
+```
+
+#### `toggle-group`
+Multiple independent toggles (not a checklist — no "done" concept, just on/off state).
+```json
+{
+  "type": "toggle-group",
+  "config": {
+    "toggles": [
+      { "id": "t1", "label": "Deep work mode", "icon": "🧠" },
+      { "id": "t2", "label": "Phone away",     "icon": "📵" }
+    ]
+  }
+}
+```
+
+#### `timer`
+A named countdown or stopwatch. Not a Pomodoro — a custom one.
+```json
+{
+  "type": "timer",
+  "config": {
+    "label": "Reading session",
+    "defaultMinutes": 20,
+    "style": "countdown | stopwatch",
+    "xpOnComplete": 30
+  }
+}
+```
+
+#### `note`
+A persistent scratchpad. Editable, always saved.
+```json
+{
+  "type": "note",
+  "config": {
+    "label": "Today's intention",
+    "placeholder": "What am I optimizing for today?",
+    "resetCadence": "daily | never"
+  }
+}
+```
+
+---
+
+### 10.4 The Conversation Flow (UX)
+
+**Location:** Sidebar nav item `✦ Builder` — a dedicated full-page view.
+
+**Layout:**
+```
+┌──────────────────────────────────────────────────────────────┐
+│  BUILD A FEATURE                                              │
+│  Describe any tracker, habit, or workflow you want.          │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ I want to track how many pages I read each day...    │   │
+│  │                                              [Build →]│   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ── Preview ─────────────────────────────────────────────── │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  📚  Daily Reading Tracker                           │   │
+│  │      Pages today: [  0  ] / 30    [+1]  [+5]  [+10] │   │
+│  │      ████░░░░░░  3 / 30 pages                       │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  "A counter widget that tracks pages read toward a 30-page  │
+│   daily goal. Resets each day. Awards 2 XP per page logged."│
+│                                                              │
+│           [Tweak description]    [Add to my app →]          │
+│                                                              │
+│  ── Your Widgets ────────────────────────────────────────── │
+│  [💧 Water Tracker]  [😴 Sleep Log]  [+ New]                │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**States:**
+1. **Empty** — prompt to describe a feature, with 3-4 example prompts as chips
+2. **Generating** — loading state, AI is processing
+3. **Preview** — rendered widget + AI's explanation + Tweak / Add buttons
+4. **Tweaking** — user can edit the description and regenerate
+5. **Saved** — widget added to "Your Widgets" list and to the Widgets view
+
+**Example prompt chips (shown in empty state):**
+- "Track my water intake"
+- "Daily reading log with page count"
+- "Morning ritual checklist"
+- "Rate my sleep quality each night"
+
+---
+
+### 10.5 The AI Prompt Contract
+
+The system prompt sent to Claude when building a feature:
+
+```
+You are the POLYMATH OS Feature Builder. Your job is to generate a CustomWidget JSON config from a user's description.
+
+Rules:
+- You MUST output only valid JSON. No explanation, no markdown, no commentary.
+- You MUST use only the supported widget types: counter, checklist, log, rating, toggle-group, timer, note
+- If the request doesn't fit any type, pick the closest and simplify
+- Keep config values practical — don't over-engineer
+- Set xpEnabled: true and xpPerAction to a sensible value (5-30) unless the user says no XP
+- Infer domain from the description (Health, Focus, Creative, Learning, etc.)
+- Choose an appropriate emoji icon
+- Choose a color that matches the domain (use CSS hex, avoid white/black)
+
+Widget schema: [insert full schema]
+
+User request: "[user's description]"
+```
+
+The response is parsed as JSON and validated against the schema before being shown to the user. If parsing fails or the type is invalid, we show a "couldn't build that one" message and ask for a simpler description.
+
+---
+
+### 10.6 Where Widgets Live
+
+Once saved, widgets appear in a **Widgets view** (sidebar nav, icon `⊞`):
+
+- Grid of user's custom widgets
+- Each is a card: icon, name, the interactive widget itself
+- Compact by default, expandable
+- Edit (re-describe to regenerate) and Delete per widget
+- Widget data persists in `game.state.customWidgets[]`
+- XP from widget actions feeds into the existing XP system
+
+**On the home view:**
+- Option to "pin" a widget to the home view's bottom section
+- Max 2 pinned widgets (space constraint)
+- Pinned widgets appear below the heatmap strip
+
+---
+
+### 10.7 Security Model
+
+**What the AI can do:**
+- Define the shape and behavior of a widget via JSON
+- Suggest XP values, cadence, labels, colors
+
+**What the AI cannot do:**
+- Execute arbitrary JavaScript
+- Access thoughts, todos, sessions, or any other app state directly
+- Modify existing views or components
+- Make network requests
+
+**Widget data isolation:**
+Each widget has its own `data` key in localStorage. The WidgetRenderer reads only `widget.data` and calls only `updateWidgetData(id, patch)`. No widget code touches anything else.
+
+**The user approval step is mandatory:**
+Preview is always shown before saving. The user reads the AI's explanation in plain English. There is no "auto-install" path.
+
+---
+
+### 10.8 What This Unlocks (The Vision)
+
+Once the schema is established, the feature builder becomes a platform:
+
+- **Import/export:** Share widget configs as JSON files or short codes
+- **Widget store:** Community-submitted configs (screened for schema compliance)
+- **AI iteration:** "Make it track weekly not daily" → AI patches only the changed fields
+- **Linked widgets:** A reading log and a reading counter that share data
+- **Mobile companion:** The same JSON schema works on any renderer
+
+This is POLYMATH OS becoming an operating system in the real sense — not just an app, but a platform that grows with the user's brain.
+
+---
+
+### 10.9 Build Checklist (When Phase 3 Starts)
+
+- [ ] Define `CustomWidget` type in `constants/index.js`
+- [ ] Add `customWidgets: []` to `useGameState` with add/update/delete/patch functions
+- [ ] Build `WidgetRenderer.jsx` — renders any widget type from config
+- [ ] Build `FeatureBuilderView.jsx` — chat input + preview + saved list
+- [ ] Write and test the AI prompt contract (see 10.5)
+- [ ] Add `'builder'` to sidebar nav
+- [ ] Add `'widgets'` to sidebar nav
+- [ ] Build `WidgetsView.jsx` — grid of saved widgets
+- [ ] Add "pin to home" logic in `HomeView.jsx`
+- [ ] Validate JSON schema on AI response before preview
+- [ ] Write empty states for both views
+- [ ] Test each widget type with real AI output
