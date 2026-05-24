@@ -135,6 +135,14 @@ export const ACHIEVEMENTS = [
   { id:'unstoppable',   icon:'⚡', title:'Unstoppable',    desc:'Maintain a 30-day streak',         check:s=>s.streak.count>=30 },
 ];
 
+export const WEEKLY_QUEST_POOL = [
+  { id:'wq_sessions', title:'The Marathon',    desc:'Complete 5 focus sessions this week',  goal:5,  type:'session', xpReward:350 },
+  { id:'wq_tasks',    title:'Destroyer Mode',  desc:'Complete 10 tasks or todos this week', goal:10, type:'tasks',   xpReward:500 },
+  { id:'wq_habits',   title:'Iron Discipline', desc:'Log habits 5 times this week',         goal:5,  type:'habit',   xpReward:280 },
+  { id:'wq_sess3',    title:'Deep Week',       desc:'Complete 3 focus sessions',            goal:3,  type:'session', xpReward:220 },
+  { id:'wq_tasks5',   title:'Task Slayer',     desc:'Complete 5 tasks or todos',            goal:5,  type:'tasks',   xpReward:300 },
+];
+
 export const CHAR_STATS = [
   { key:'INT', label:'Intellect',  domains:['AI/ML','Physics'],   color:'#60a5fa' },
   { key:'WIS', label:'Wisdom',     domains:['Learning','Life'],    color:'#a78bfa' },

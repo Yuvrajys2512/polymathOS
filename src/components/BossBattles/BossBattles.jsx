@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { DOMAIN_COLOR, DOMAINS } from '../../constants/index.js';
+import { todayStr } from '../../utils/game.js';
 
 const DEFAULT_PHASES = [
   { name: 'Research & Prep',     xpReward: 50  },
@@ -9,15 +10,39 @@ const DEFAULT_PHASES = [
   { name: 'Final Strike',        xpReward: 200 },
 ];
 
-export default function BossBattles({ bosses, onAdd, onCompletePhase, onDelete }) {
+export default function BossBattles({ bosses, onAdd, onCompletePhase, onDelete, thoughts = [], todos = [] }) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName]         = useState('');
   const [domain, setDomain]     = useState('Learning');
   const [phaseCount, setPhaseCount] = useState(3);
   const [defeated, setDefeated] = useState(null);
 
-  const activeBosses  = bosses.filter(b => !b.defeated);
+  const activeBosses   = bosses.filter(b => !b.defeated);
   const defeatedBosses = bosses.filter(b => b.defeated);
+
+  const suggestions = useMemo(() => {
+    const today = todayStr();
+    const list = [];
+
+    // Group undone task thoughts by domain
+    const taskThoughts = (thoughts || []).filter(t => t.type === 'task' && !t.done && DOMAINS.includes(t.domain));
+    const byDomain = {};
+    taskThoughts.forEach(t => { byDomain[t.domain] = (byDomain[t.domain] || 0) + 1; });
+    Object.entries(byDomain)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .forEach(([domain, count]) => {
+        list.push({ id: `sug-${domain}`, name: `${domain} Backlog`, domain, desc: `${count} pending task${count > 1 ? 's' : ''} in ${domain}` });
+      });
+
+    // Overdue todos
+    const overdue = (todos || []).filter(t => !t.done && t.date && t.date < today);
+    if (overdue.length > 0) {
+      list.push({ id: 'sug-overdue', name: 'Overdue Siege', domain: 'Life', desc: `${overdue.length} overdue todo${overdue.length > 1 ? 's' : ''}` });
+    }
+
+    return list;
+  }, [thoughts, todos]);
 
   function handleAdd() {
     if (!name.trim()) return;
@@ -79,9 +104,28 @@ export default function BossBattles({ bosses, onAdd, onCompletePhase, onDelete }
         </div>
       )}
 
-      {bosses.length === 0 && !showForm && (
+      {bosses.length === 0 && !showForm && suggestions.length === 0 && (
         <div className="empty" style={{ padding: '20px 0 8px' }}>
           No bosses yet. Summon an intimidating goal and fight it phase by phase.
+        </div>
+      )}
+
+      {activeBosses.length === 0 && !showForm && suggestions.length > 0 && (
+        <div className="boss-suggest-section">
+          <div className="boss-suggest-label">DETECTED THREATS</div>
+          <div className="boss-suggest-list">
+            {suggestions.map(s => (
+              <div key={s.id} className="boss-suggest-item" onClick={() => {
+                onAdd({ name: s.name, domain: s.domain, phases: DEFAULT_PHASES.slice(0, 3).map((p, i) => ({ id: crypto.randomUUID(), name: p.name, xpReward: p.xpReward, done: false, index: i })) });
+              }}>
+                <div className="boss-suggest-info">
+                  <div className="boss-suggest-name">{s.name}</div>
+                  <div className="boss-suggest-meta">{s.desc} · {s.domain}</div>
+                </div>
+                <button className="boss-suggest-btn">Summon</button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { DOMAINS, STORAGE_KEY, STORAGE_V1, DEFAULT_HABITS, TIER_XP, IDENTITY_MODES } from '../constants/index.js';
 import {
   todayStr, refreshQuests, updateStreak, advanceQuests, questBonusXP,
-  findNewAchs, xpToLevel,
+  findNewAchs, xpToLevel, refreshWeeklyQuest, advanceWeeklyQuest,
 } from '../utils/game.js';
 import { classifyWithClaude, localClassify } from '../utils/classify.js';
 
@@ -20,6 +20,8 @@ const SEED = {
   streak: { count: 0, lastDate: null },
   achievements: [],
   quests: { date: null, list: [] },
+  weeklyQuest: null,
+  dailyComboStreak: { count: 0, lastComboDate: null },
   taskBoard: [],
   habits: DEFAULT_HABITS,
   energyLog: [],
@@ -41,6 +43,8 @@ function loadState() {
         energyLog: s.energyLog || [],
         questlines: s.questlines || [],
         bosses: s.bosses || [],
+        weeklyQuest: s.weeklyQuest || null,
+        dailyComboStreak: s.dailyComboStreak || { count: 0, lastComboDate: null },
         identityModes: s.identityModes?.length ? s.identityModes : IDENTITY_MODES,
         domainList: s.domainList?.length ? s.domainList : DOMAINS,
         todos: s.todos || [],
@@ -70,7 +74,9 @@ export function useGameState() {
   useEffect(() => {
     setState(p => {
       const fq = refreshQuests(p.quests);
-      return fq === p.quests ? p : { ...p, quests: fq };
+      const nwq = refreshWeeklyQuest(p.weeklyQuest);
+      const changed = fq !== p.quests || nwq !== p.weeklyQuest;
+      return changed ? { ...p, quests: fq, weeklyQuest: nwq } : p;
     });
   }, []);
 
@@ -117,13 +123,34 @@ export function useGameState() {
     const fq = refreshQuests(p.quests);
     const newStreak = updateStreak(p.streak);
     const ql = advanceQuests(fq.list, questType);
-    const bonus = questBonusXP(ql, fq.list);
-    const newXp = {
-      ...p.xp,
-      [domain]: (p.xp[domain] || 0) + xpAmt,
-      ...(bonus > 0 ? { Life: (p.xp['Life'] || 0) + bonus } : {}),
-    };
-    const ns = { ...p, xp: newXp, streak: newStreak, quests: { ...fq, list: ql } };
+    const questBonus = questBonusXP(ql, fq.list);
+
+    // Weekly quest advancement
+    const freshWeekly = refreshWeeklyQuest(p.weeklyQuest);
+    const newWeekly = advanceWeeklyQuest(freshWeekly, questType);
+    const weeklyBonus = (newWeekly?.completed && !freshWeekly?.completed) ? newWeekly.xpReward : 0;
+
+    // Daily combo: all 3 daily quests done today → +75 XP bonus
+    const today = todayStr();
+    const curCombo = p.dailyComboStreak || { count: 0, lastComboDate: null };
+    const allDone = ql.every(q => q.completed);
+    let comboBonus = 0;
+    let newCombo = curCombo;
+    if (allDone && curCombo.lastComboDate !== today) {
+      comboBonus = 75;
+      const yest = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      newCombo = {
+        count: curCombo.lastComboDate === yest ? curCombo.count + 1 : 1,
+        lastComboDate: today,
+      };
+    }
+
+    // XP — domain gets xpAmt; Life gets all bonus XP
+    const lifeBonus = questBonus + comboBonus + weeklyBonus;
+    const newXp = { ...p.xp, [domain]: (p.xp[domain] || 0) + xpAmt };
+    if (lifeBonus > 0) newXp['Life'] = (newXp['Life'] || 0) + lifeBonus;
+
+    const ns = { ...p, xp: newXp, streak: newStreak, quests: { ...fq, list: ql }, weeklyQuest: newWeekly, dailyComboStreak: newCombo };
     const newA = findNewAchs(ns, prevAchs);
     if (newA.length > 0) pendingAchs.current.push(...newA);
     return { ...ns, achievements: [...prevAchs, ...newA.map(a => a.id)] };
@@ -157,8 +184,13 @@ export function useGameState() {
         if (result.type === 'insight') ql = advanceQuests(ql, 'insight');
         const bonus = questBonusXP(ql, p.quests.list);
         const d = result.domain;
-        const newXp = { ...p.xp, [d]: (p.xp[d] || 0) + 10, ...(bonus > 0 ? { Life: (p.xp['Life'] || 0) + bonus } : {}) };
-        const ns = { ...p, thoughts: newT, xp: newXp, quests: { ...p.quests, list: ql } };
+        const freshWeekly = refreshWeeklyQuest(p.weeklyQuest);
+        const newWeekly = advanceWeeklyQuest(freshWeekly, 'capture');
+        const weeklyBonus = (newWeekly?.completed && !freshWeekly?.completed) ? newWeekly.xpReward : 0;
+        const lifeBonus = (bonus > 0 ? bonus : 0) + weeklyBonus;
+        const newXp = { ...p.xp, [d]: (p.xp[d] || 0) + 10 };
+        if (lifeBonus > 0) newXp['Life'] = (newXp['Life'] || 0) + lifeBonus;
+        const ns = { ...p, thoughts: newT, xp: newXp, quests: { ...p.quests, list: ql }, weeklyQuest: newWeekly };
         const newA = findNewAchs(ns, prevAchs);
         if (newA.length > 0) pendingAchs.current.push(...newA);
         return { ...ns, achievements: [...prevAchs, ...newA.map(a => a.id)] };
@@ -474,5 +506,7 @@ export function useGameState() {
     addDomain, deleteDomain,
     addTodo, toggleTodo, deleteTodo,
     addSubtask, toggleSubtask, deleteSubtask,
+    weeklyQuest: state.weeklyQuest,
+    dailyComboStreak: state.dailyComboStreak,
   };
 }

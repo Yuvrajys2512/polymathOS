@@ -1,4 +1,4 @@
-import { DOMAINS, XP_PER_LEVEL, QUEST_POOL, ACHIEVEMENTS } from '../constants/index.js';
+import { DOMAINS, XP_PER_LEVEL, QUEST_POOL, ACHIEVEMENTS, WEEKLY_QUEST_POOL } from '../constants/index.js';
 
 export function xpToLevel(xp)  { return Math.floor((xp || 0) / XP_PER_LEVEL) + 1; }
 export function xpInLevel(xp)  { return (xp || 0) % XP_PER_LEVEL; }
@@ -76,6 +76,30 @@ export function getHabitStreak(dates) {
 
 export function fmt(s) {
   return `${Math.floor(s / 60).toString().padStart(2,'0')}:${Math.floor(s % 60).toString().padStart(2,'0')}`;
+}
+
+export function getISOWeekStr() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const w = new Date(d.getFullYear(), 0, 4);
+  const wn = 1 + Math.round(((d.getTime() - w.getTime()) / 86400000 - 3 + (w.getDay() + 6) % 7) / 7);
+  return `${d.getFullYear()}-W${String(wn).padStart(2, '0')}`;
+}
+
+export function refreshWeeklyQuest(wq) {
+  const weekStr = getISOWeekStr();
+  if (wq?.weekStr === weekStr) return wq;
+  const [yr, wk] = weekStr.replace('W', '').split('-').map(Number);
+  const seed = (yr * 53 + wk * 7);
+  const picked = WEEKLY_QUEST_POOL[Math.abs(seed) % WEEKLY_QUEST_POOL.length];
+  return { ...picked, weekStr, progress: 0, completed: false };
+}
+
+export function advanceWeeklyQuest(wq, type, val = 1) {
+  if (!wq || wq.completed || wq.type !== type) return wq;
+  const np = Math.min(wq.goal, wq.progress + val);
+  return { ...wq, progress: np, completed: np >= wq.goal };
 }
 
 export function pickChaosTask(taskBoard, thoughts, energyLevel) {

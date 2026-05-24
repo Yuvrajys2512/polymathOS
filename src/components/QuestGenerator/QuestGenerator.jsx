@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DOMAIN_COLOR } from '../../constants/index.js';
 import { localGenerateQuestline, generateQuestlineWithClaude } from '../../utils/questGen.js';
 
-export default function QuestGenerator({ questlines, apiKey, onGenerate, onCompleteQuest, onDeleteQuestline }) {
+export default function QuestGenerator({ questlines, apiKey, onGenerate, onCompleteQuest, onDeleteQuestline, intention = '' }) {
   const [goal, setGoal]       = useState('');
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
@@ -40,6 +40,11 @@ export default function QuestGenerator({ questlines, apiKey, onGenerate, onCompl
         </span>
       </div>
 
+      {intention && !goal && (
+        <button className="qgen-intent-fill" onClick={() => setGoal(intention)}>
+          ✦ Use today's intention: "{intention.length > 40 ? intention.slice(0, 38) + '…' : intention}"
+        </button>
+      )}
       <div className="qgen-input-row">
         <input
           value={goal}

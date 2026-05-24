@@ -146,6 +146,7 @@ function MainApp() {
                 addSubtask={game.addSubtask}
                 toggleSubtask={game.toggleSubtask}
                 deleteSubtask={game.deleteSubtask}
+                onNav={setActiveView}
               />
             )}
             {activeView === 'quests' && (
