@@ -5,6 +5,17 @@ import { ENERGY_LEVELS } from '../constants/index.js';
 const P_COLORS = { 1: '#f87171', 2: '#fbbf24', 3: '#00d9b1', 4: '#6b7280' };
 const P_LABELS = { 1: 'Critical', 2: 'Important', 3: 'Normal', 4: 'Someday' };
 
+// ── Scope date helpers ───────────────────────────────────────────
+function getMondayOfWeek() {
+  const d = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return d.toISOString().split('T')[0];
+}
+function getFirstOfMonth() {
+  return new Date().toISOString().slice(0, 8) + '01';
+}
+
 // ── Command bar natural-language parser ──────────────────────────
 function parseInput(raw) {
   let text = raw;
@@ -41,7 +52,6 @@ function fireExplosion(el) {
   }
 }
 
-// ── Ripple wave on item ──────────────────────────────────────────
 function fireRipple(el) {
   if (!el) return;
   const r = document.createElement('div');
@@ -51,14 +61,12 @@ function fireRipple(el) {
   r.addEventListener('animationend', () => r.remove());
 }
 
-// ── Multi-Arc HUD ────────────────────────────────────────────────
-function MultiArcHUD({ todos, today }) {
-  const todayAll  = todos.filter(t => t.date === today);
-  const todayDone = todayAll.filter(t => t.done);
-  const total     = todayAll.length;
-  const doneCount = todayDone.length;
+// ── Multi-Arc HUD — accepts pre-filtered todos ───────────────────
+function MultiArcHUD({ todos }) {
+  const total     = todos.length;
+  const doneCount = todos.filter(t => t.done).length;
   const arcs = [1, 2, 3, 4].map(p => {
-    const pAll  = todayAll.filter(t => t.priority === p);
+    const pAll  = todos.filter(t => t.priority === p);
     const pDone = pAll.filter(t => t.done);
     return { p, frac: pAll.length ? pDone.length / pAll.length : 0, done: pDone.length, tot: pAll.length };
   });
@@ -99,7 +107,7 @@ function MultiArcHUD({ todos, today }) {
   );
 }
 
-// ── Velocity Sparkline ───────────────────────────────────────────
+// ── Velocity Sparkline (daily only) ─────────────────────────────
 function VelocitySpark({ todos, today }) {
   const points = useMemo(() => {
     return todos
@@ -166,7 +174,7 @@ function LivingBackground({ completionRatio }) {
   return <canvas ref={canvasRef} className="todo-living-bg" />;
 }
 
-// ── Subtask row with stagger ─────────────────────────────────────
+// ── Subtask row ──────────────────────────────────────────────────
 function SubtaskRow({ sub, onToggle, onDelete, delay = 0 }) {
   return (
     <div className={`subtask-row stagger-in${sub.done ? ' done' : ''}`} style={{ animationDelay: `${delay}ms` }}>
@@ -181,7 +189,6 @@ function SubtaskRow({ sub, onToggle, onDelete, delay = 0 }) {
 function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDeleteSub, apiKey, onFocus, dragHandlers = {}, viewMode }) {
   const [expanded,  setExpanded]  = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
-  const [subtaskCount, setSubtaskCount] = useState((todo.subtasks || []).length);
   const itemRef  = useRef(null);
   const checkRef = useRef(null);
 
@@ -201,9 +208,7 @@ function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDelet
     setAiLoading(true);
     try {
       const subs = await expandTask(todo.text, apiKey);
-      const prevCount = (todo.subtasks || []).length;
       subs.forEach(text => onAddSubtask(todo.id, text));
-      setSubtaskCount(prevCount + subs.length);
       setExpanded(true);
     } finally { setAiLoading(false); }
   }
@@ -313,6 +318,13 @@ function VictoryOverlay({ onDismiss }) {
   );
 }
 
+// ── Scope labels / headers ───────────────────────────────────────
+const SCOPE_LABELS = {
+  daily:   { title: 'TODAY',      section: 'Today',      done: 'Done today',      overdue: 'Overdue' },
+  weekly:  { title: 'THIS WEEK',  section: 'This Week',  done: 'Done this week',  overdue: 'From last week' },
+  monthly: { title: 'THIS MONTH', section: 'This Month', done: 'Done this month', overdue: 'From last month' },
+};
+
 // ── Main view ────────────────────────────────────────────────────
 export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSubtask, toggleSubtask, deleteSubtask, onNav }) {
   const [rawInput,    setRawInput]    = useState('');
@@ -326,7 +338,8 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
   const [adaptSorted, setAdaptSorted] = useState(false);
   const [localOrder,  setLocalOrder]  = useState(null);
   const [fireTs,      setFireTs]      = useState([]);
-  const inputRef   = useRef(null);
+  const [todoScope,   setTodoScope]   = useState('daily');
+  const inputRef    = useRef(null);
   const prevDoneRef = useRef(-1);
 
   const parsed         = useMemo(() => parseInput(rawInput), [rawInput]);
@@ -334,48 +347,73 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
   const activeEstimate = parsed.estimate ?? (estimate ? parseInt(estimate) : null);
   const hasHints       = parsed.priority !== null || parsed.estimate !== null;
 
-  const today       = new Date().toISOString().split('T')[0];
-  const allTodos    = state.todos || [];
-  const todayAll    = allTodos.filter(t => t.date === today);
-  const todayDone   = todayAll.filter(t => t.done);
-  const todayActive = todayAll.filter(t => !t.done);
-  const overdueAct  = allTodos.filter(t => !t.done && t.date < today);
-  const compRatio   = todayAll.length ? todayDone.length / todayAll.length : 0;
+  const today      = new Date().toISOString().split('T')[0];
+  const weekStart  = useMemo(getMondayOfWeek, []);
+  const monthStart = useMemo(getFirstOfMonth, []);
+  const allTodos   = state.todos || [];
+
+  // Reset drag order when scope changes
+  useEffect(() => { setLocalOrder(null); prevDoneRef.current = -1; }, [todoScope]);
+
+  // Scope-filtered todo lists
+  const { scopedAll, scopedActive, scopedDone, scopedOverdue, compRatio } = useMemo(() => {
+    let all, active, done, overdue;
+    if (todoScope === 'daily') {
+      all     = allTodos.filter(t => (!t.scope || t.scope === 'daily') && t.date === today);
+      overdue = allTodos.filter(t => (!t.scope || t.scope === 'daily') && !t.done && t.date < today);
+    } else if (todoScope === 'weekly') {
+      all     = allTodos.filter(t => t.scope === 'weekly' && t.date >= weekStart);
+      overdue = allTodos.filter(t => t.scope === 'weekly' && !t.done && t.date < weekStart);
+    } else {
+      const monthPrefix = monthStart.slice(0, 7);
+      all     = allTodos.filter(t => t.scope === 'monthly' && t.date.startsWith(monthPrefix));
+      overdue = allTodos.filter(t => t.scope === 'monthly' && !t.done && !t.date.startsWith(monthPrefix));
+    }
+    done   = all.filter(t => t.done);
+    active = all.filter(t => !t.done);
+    return {
+      scopedAll: all, scopedActive: active, scopedDone: done, scopedOverdue: overdue,
+      compRatio: all.length ? done.length / all.length : 0,
+    };
+  }, [allTodos, todoScope, today, weekStart, monthStart]);
+
+  // Date to stamp new todos with
+  const scopeDate = todoScope === 'daily' ? today : todoScope === 'weekly' ? weekStart : monthStart;
 
   const latestEnergy = useMemo(() => {
     const log = state.energyLog || [];
     return log.filter(e => e.date === today).pop()?.level ?? 3;
   }, [state.energyLog, today]);
 
-  const sortedToday = useMemo(() => {
+  const sortedActive = useMemo(() => {
     let base;
     if (!adaptSorted) {
-      base = [...todayActive].sort((a, b) => a.priority - b.priority);
+      base = [...scopedActive].sort((a, b) => a.priority - b.priority);
     } else if (latestEnergy >= 4) {
-      base = [...todayActive].sort((a, b) => a.priority - b.priority);
+      base = [...scopedActive].sort((a, b) => a.priority - b.priority);
     } else if (latestEnergy <= 2) {
-      base = [...todayActive].sort((a, b) => b.priority - a.priority);
+      base = [...scopedActive].sort((a, b) => b.priority - a.priority);
     } else {
       const ord = [2, 1, 3, 4];
-      base = [...todayActive].sort((a, b) => ord.indexOf(a.priority) - ord.indexOf(b.priority));
+      base = [...scopedActive].sort((a, b) => ord.indexOf(a.priority) - ord.indexOf(b.priority));
     }
     if (!localOrder) return base;
     const map = new Map(localOrder.map((id, i) => [id, i]));
     return [...base].sort((a, b) => (map.get(a.id) ?? 999) - (map.get(b.id) ?? 999));
-  }, [todayActive, localOrder, adaptSorted, latestEnergy]);
+  }, [scopedActive, localOrder, adaptSorted, latestEnergy]);
 
-  const sortedOverdue = [...overdueAct].sort((a, b) => new Date(a.date) - new Date(b.date));
-  const todayIds      = sortedToday.map(t => t.id);
+  const sortedOverdue = [...scopedOverdue].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const activeIds     = sortedActive.map(t => t.id);
 
   // Victory trigger
   useEffect(() => {
-    if (prevDoneRef.current === -1) { prevDoneRef.current = todayDone.length; return; }
+    if (prevDoneRef.current === -1) { prevDoneRef.current = scopedDone.length; return; }
     const prev = prevDoneRef.current;
-    prevDoneRef.current = todayDone.length;
-    if (todayAll.length > 0 && todayDone.length === todayAll.length && todayDone.length > prev) {
+    prevDoneRef.current = scopedDone.length;
+    if (scopedAll.length > 0 && scopedDone.length === scopedAll.length && scopedDone.length > prev) {
       setShowVictory(true);
     }
-  }, [todayDone.length, todayAll.length]);
+  }, [scopedDone.length, scopedAll.length]);
 
   const isOnFire = useMemo(() => {
     const now = Date.now();
@@ -386,7 +424,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
     e?.preventDefault();
     const text = parsed.text || rawInput.trim();
     if (!text) return;
-    addTodo({ text, priority: activePriority, estimate: activeEstimate });
+    addTodo({ text, priority: activePriority, estimate: activeEstimate, scope: todoScope, date: scopeDate });
     setRawInput('');
     setEstimate('');
     inputRef.current?.focus();
@@ -404,7 +442,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
     try {
       const suggs = await suggestTodos(state.thoughts || [], state.intention, state.apiKey);
       if (!suggs.length) { setSuggestErr('No suggestions — capture more thoughts.'); setTimeout(() => setSuggestErr(''), 3500); return; }
-      suggs.forEach(s => addTodo({ text: s.text, priority: s.priority || 2 }));
+      suggs.forEach(s => addTodo({ text: s.text, priority: s.priority || 2, scope: todoScope, date: scopeDate }));
     } catch { setSuggestErr('AI error — check API key.'); setTimeout(() => setSuggestErr(''), 3000); }
     finally { setSuggesting(false); }
   }
@@ -420,9 +458,8 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
       onDragStart: e => { e.dataTransfer.effectAllowed = 'move'; e.currentTarget.classList.add('dragging'); e.dataTransfer.setData('text/plain', todoId); },
       onDragOver:  e => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); },
       onDragLeave: e => { e.currentTarget.classList.remove('drag-over'); },
-      onDrop:      e => {
-        e.preventDefault();
-        e.currentTarget.classList.remove('drag-over');
+      onDrop: e => {
+        e.preventDefault(); e.currentTarget.classList.remove('drag-over');
         const dragId = e.dataTransfer.getData('text/plain');
         if (dragId === todoId) return;
         const ids = [...listIds];
@@ -443,12 +480,13 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
 
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const energyMeta = ENERGY_LEVELS.find(e => e.level === latestEnergy);
+  const labels = SCOPE_LABELS[todoScope];
 
   const boardCols = [
-    { p: 1, label: 'Critical',  tasks: sortedToday.filter(t => t.priority === 1) },
-    { p: 2, label: 'Important', tasks: sortedToday.filter(t => t.priority === 2) },
-    { p: 3, label: 'Normal',    tasks: sortedToday.filter(t => t.priority === 3) },
-    { p: 4, label: 'Done',      tasks: todayDone },
+    { p: 1, label: 'Critical',  tasks: sortedActive.filter(t => t.priority === 1) },
+    { p: 2, label: 'Important', tasks: sortedActive.filter(t => t.priority === 2) },
+    { p: 3, label: 'Normal',    tasks: sortedActive.filter(t => t.priority === 3) },
+    { p: 4, label: 'Done',      tasks: scopedDone },
   ];
 
   return (
@@ -459,12 +497,12 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
       {/* Header */}
       <div className="todo-view-header">
         <div className="todo-view-title-block">
-          <span className="view-title">TODAY</span>
+          <span className="view-title">{labels.title}</span>
           <span className="todo-view-date">{dateStr}</span>
-          <VelocitySpark todos={allTodos} today={today} />
+          {todoScope === 'daily' && <VelocitySpark todos={allTodos} today={today} />}
         </div>
         <div className="todo-view-header-right">
-          <MultiArcHUD todos={allTodos} today={today} />
+          <MultiArcHUD todos={scopedAll} />
           <div className="todo-header-controls">
             <button
               className={`todo-ctrl-btn${adaptSorted ? ' active' : ''}`}
@@ -484,6 +522,19 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
         </div>
       </div>
 
+      {/* Scope toggle */}
+      <div className="todo-scope-toggle">
+        {['daily', 'weekly', 'monthly'].map(s => (
+          <button
+            key={s}
+            className={`scope-btn${todoScope === s ? ' active' : ''}`}
+            onClick={() => setTodoScope(s)}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Command bar */}
       <form onSubmit={handleAdd}>
         <div className={`todo-cmd-bar${isOnFire ? ' on-fire' : ''}${rawInput ? ' has-input' : ''}`}>
@@ -494,8 +545,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
               className="todo-cmd-input"
               value={rawInput}
               onChange={e => setRawInput(e.target.value)}
-              placeholder="Add a task…"
-              autoFocus
+              placeholder={`Add a ${todoScope} task…`}
             />
             <button type="submit" className="todo-add-btn" disabled={!rawInput.trim()}>+</button>
           </div>
@@ -525,7 +575,6 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
                 value={parsed.estimate ?? estimate}
                 onChange={e => setEstimate(e.target.value)}
                 placeholder="min"
-                title="Estimated minutes"
               />
               <div className="cmd-time-presets">
                 {[15, 30, 60].map(m => (
@@ -577,7 +626,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
                 <div className="board-col-body">
                   {col.tasks.map(t => (
                     <TodoItem key={t.id} todo={t} {...commonProps}
-                      dragHandlers={col.p !== 4 ? makeDrag(t.id, todayIds) : {}} />
+                      dragHandlers={col.p !== 4 ? makeDrag(t.id, activeIds) : {}} />
                   ))}
                   {col.tasks.length === 0 && <div className="board-empty">—</div>}
                 </div>
@@ -588,7 +637,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
           <>
             {sortedOverdue.length > 0 && (
               <section className="todo-view-section">
-                <div className="todo-view-section-label overdue-label">⚠ Overdue ({sortedOverdue.length})</div>
+                <div className="todo-view-section-label overdue-label">⚠ {labels.overdue} ({sortedOverdue.length})</div>
                 {sortedOverdue.map(t => (
                   <TodoItem key={t.id} todo={t} {...commonProps}
                     dragHandlers={makeDrag(t.id, sortedOverdue.map(x => x.id))} />
@@ -597,26 +646,26 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
             )}
             <section className="todo-view-section">
               <div className="todo-view-section-label">
-                Today
-                {sortedToday.length > 0 && <span className="todo-view-section-count">{sortedToday.length} left</span>}
+                {labels.section}
+                {sortedActive.length > 0 && <span className="todo-view-section-count">{sortedActive.length} left</span>}
                 {adaptSorted && <span className="adapt-badge">{energyMeta?.emoji} energy-sorted</span>}
               </div>
-              {sortedToday.length === 0 && todayDone.length === 0 ? (
+              {sortedActive.length === 0 && scopedDone.length === 0 ? (
                 <div className="todo-empty">
                   <div className="todo-empty-icon">◈</div>
                   <span>Nothing queued.</span>
                   <span>Add a task or let AI suggest.</span>
                 </div>
               ) : (
-                sortedToday.map(t => (
-                  <TodoItem key={t.id} todo={t} {...commonProps} dragHandlers={makeDrag(t.id, todayIds)} />
+                sortedActive.map(t => (
+                  <TodoItem key={t.id} todo={t} {...commonProps} dragHandlers={makeDrag(t.id, activeIds)} />
                 ))
               )}
             </section>
-            {todayDone.length > 0 && (
-              <details className="todo-view-section todo-done-section" open={compRatio === 1 && todayAll.length > 0}>
-                <summary className="todo-view-section-label done-label">✓ Done today ({todayDone.length})</summary>
-                {todayDone.map(t => <TodoItem key={t.id} todo={t} {...commonProps} dragHandlers={{}} />)}
+            {scopedDone.length > 0 && (
+              <details className="todo-view-section todo-done-section" open={compRatio === 1 && scopedAll.length > 0}>
+                <summary className="todo-view-section-label done-label">✓ {labels.done} ({scopedDone.length})</summary>
+                {scopedDone.map(t => <TodoItem key={t.id} todo={t} {...commonProps} dragHandlers={{}} />)}
               </details>
             )}
           </>

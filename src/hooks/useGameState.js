@@ -387,12 +387,12 @@ export function useGameState() {
 
   const TODO_XP = { 1: 30, 2: 20, 3: 15, 4: 10 };
 
-  function addTodo({ text, priority = 2, estimate = null }) {
+  function addTodo({ text, priority = 2, estimate = null, scope = 'daily', date = null }) {
     const today = new Date().toISOString().split('T')[0];
     setState(p => ({
       ...p,
       todos: [
-        { id: crypto.randomUUID(), text, priority, estimate, done: false, doneAt: null, createdAt: new Date().toISOString(), date: today, subtasks: [] },
+        { id: crypto.randomUUID(), text, priority, estimate, done: false, doneAt: null, createdAt: new Date().toISOString(), date: date || today, scope: scope || 'daily', subtasks: [] },
         ...(p.todos || []),
       ],
     }));
