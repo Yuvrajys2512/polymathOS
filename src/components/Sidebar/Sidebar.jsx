@@ -1,16 +1,16 @@
 const NAV = [
-  { id: 'home',      icon: '⌂', label: 'Home'     },
-  { id: 'focus',     icon: '◉', label: 'Focus'    },
-  { id: 'thoughts',  icon: '☁', label: 'Thoughts' },
-  { id: 'todo',      icon: '☑', label: 'To-Do'    },
-  { id: 'quests',    icon: '⚔', label: 'Quests'   },
-  { id: 'character', icon: '◆', label: 'Profile'  },
+  { id: 'home',     icon: '⌂', label: 'Home'     },
+  { id: 'focus',    icon: '◉', label: 'Focus'    },
+  { id: 'thoughts', icon: '☁', label: 'Thoughts' },
+  { id: 'todo',     icon: '☑', label: 'To-Do'    },
+  { id: 'quests',   icon: '⚔', label: 'Quests'   },
+  { id: 'projects', icon: '▣', label: 'Projects' },
+  { id: 'profile',  icon: '◆', label: 'Profile'  },
 ];
 
 const OVERLAYS = [
-  { id: 'forge',    icon: '✦', label: 'Forge',   kind: 'overlay' },
-  { id: 'brainmap', icon: '◎', label: 'Map',     kind: 'overlay' },
-  { id: 'profile',  icon: '◈', label: 'Profile', kind: 'nav'     },
+  { id: 'forge',    icon: '✦', label: 'Forge', kind: 'overlay' },
+  { id: 'brainmap', icon: '◎', label: 'Map',   kind: 'overlay' },
 ];
 
 export default function Sidebar({ activeView, onNav, onForge, onBrainMap, focusLocked, todoPendingCount }) {

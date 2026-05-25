@@ -9,8 +9,8 @@ import { classifyWithClaude, localClassify } from '../utils/classify.js';
 const SEED = {
   thoughts: [],
   projects: [
-    { id: crypto.randomUUID(), name: 'Build POLYMATH OS', progress: 20 },
-    { id: crypto.randomUUID(), name: 'Define active research threads', progress: 10 },
+    { id: crypto.randomUUID(), name: 'Build POLYMATH OS', goal: 'Ship the first public version', domain: 'AI/ML', status: 'active', progress: 20, createdAt: new Date().toISOString(), entries: [] },
+    { id: crypto.randomUUID(), name: 'Define research threads', goal: '', domain: 'Learning', status: 'active', progress: 10, createdAt: new Date().toISOString(), entries: [] },
   ],
   intention: '', intentionHistory: [], sessions: [], apiKey: '', groqKey: '',
   pomodoro: { focusMinutes: 25, breakMinutes: 5 },
@@ -44,10 +44,18 @@ function loadState() {
         questlines: s.questlines || [],
         bosses: s.bosses || [],
         weeklyQuest: s.weeklyQuest || null,
+        streak: { best: 0, ...(s.streak || {}) },
         dailyComboStreak: s.dailyComboStreak || { count: 0, lastComboDate: null },
         identityModes: s.identityModes?.length ? s.identityModes : IDENTITY_MODES,
         domainList: s.domainList?.length ? s.domainList : DOMAINS,
         todos: s.todos || [],
+        projects: (s.projects || SEED.projects).map(p => ({
+          goal: '', domain: 'Life', status: 'active', targetDate: null,
+          createdAt: new Date().toISOString(), entries: [], notes: '', projectTodos: [],
+          ...p,
+          entries: (p.entries || []).map(e => ({ pinned: false, resolved: false, ...e })),
+          projectTodos: (p.projectTodos || []),
+        })),
       };
     }
     const old = JSON.parse(localStorage.getItem(STORAGE_V1) || 'null');
@@ -218,7 +226,7 @@ export function useGameState() {
 
   const deleteThought = id => setState(p => ({ ...p, thoughts: p.thoughts.filter(t => t.id !== id) }));
 
-  function finishSession(mode, actDomain, focusMinutes, identityMode) {
+  function finishSession(mode, actDomain, focusMinutes, identityMode, projectId) {
     if (mode === 'focus') {
       const since = new Date(Date.now() - focusMinutes * 60000).toISOString();
       const cap = state.thoughts.filter(t => t.createdAt >= since).length;
@@ -229,6 +237,7 @@ export function useGameState() {
           id: crypto.randomUUID(), mode: 'focus', domain: actDomain,
           minutes: focusMinutes, captured: cap, at: new Date().toISOString(),
           identityMode: identityMode?.id, xpEarned,
+          projectId: projectId || null,
         }, ...p.sessions].slice(0, 50);
         return applyGame({ ...p, sessions: newSess }, actDomain, 'session', xpEarned);
       });
@@ -303,12 +312,125 @@ export function useGameState() {
   const setApiKey  = key => setState(p => ({ ...p, apiKey: key }));
   const setGroqKey = key => setState(p => ({ ...p, groqKey: key }));
 
-  function addProject(name) {
-    setState(p => ({ ...p, projects: [...p.projects, { id: crypto.randomUUID(), name, progress: 0 }] }));
+  function addProject(name, goal = '', domain = 'Life') {
+    setState(p => ({
+      ...p,
+      projects: [
+        ...p.projects,
+        {
+          id: crypto.randomUUID(), name, goal, domain,
+          status: 'active', progress: 0, targetDate: null,
+          createdAt: new Date().toISOString(), entries: [], notes: '', projectTodos: [],
+        },
+      ],
+    }));
+  }
+
+  function updateProject(id, changes) {
+    setState(p => ({ ...p, projects: p.projects.map(x => x.id === id ? { ...x, ...changes } : x) }));
   }
 
   function updateProjectProgress(id, progress) {
     setState(p => ({ ...p, projects: p.projects.map(x => x.id === id ? { ...x, progress } : x) }));
+  }
+
+  function addProjectEntry(projectId, type, text) {
+    setState(p => ({
+      ...p,
+      projects: p.projects.map(x => x.id !== projectId ? x : {
+        ...x,
+        entries: [
+          ...(x.entries || []),
+          { id: crypto.randomUUID(), type, text, createdAt: new Date().toISOString(), pinned: false, resolved: false },
+        ],
+      }),
+    }));
+  }
+
+  function deleteProjectEntry(projectId, entryId) {
+    setState(p => ({
+      ...p,
+      projects: p.projects.map(x => x.id !== projectId ? x : {
+        ...x,
+        entries: (x.entries || []).filter(e => e.id !== entryId),
+      }),
+    }));
+  }
+
+  function togglePinEntry(projectId, entryId) {
+    setState(p => ({
+      ...p,
+      projects: p.projects.map(x => x.id !== projectId ? x : {
+        ...x,
+        entries: (x.entries || []).map(e => e.id === entryId ? { ...e, pinned: !e.pinned } : e),
+      }),
+    }));
+  }
+
+  function toggleResolveEntry(projectId, entryId) {
+    setState(p => ({
+      ...p,
+      projects: p.projects.map(x => x.id !== projectId ? x : {
+        ...x,
+        entries: (x.entries || []).map(e => e.id === entryId ? { ...e, resolved: !e.resolved } : e),
+      }),
+    }));
+  }
+
+  function completeProject(projectId, reflection) {
+    setState(p => {
+      const proj = p.projects.find(x => x.id === projectId);
+      if (!proj) return p;
+      const reflectionEntry = reflection?.trim() ? {
+        id: crypto.randomUUID(), type: 'note',
+        text: `[Reflection] ${reflection.trim()}`,
+        createdAt: new Date().toISOString(), pinned: true, resolved: false,
+      } : null;
+      const updatedProjects = p.projects.map(x => x.id !== projectId ? x : {
+        ...x, status: 'completed', completedAt: new Date().toISOString(),
+        entries: reflectionEntry ? [...(x.entries || []), reflectionEntry] : (x.entries || []),
+      });
+      return applyGame({ ...p, projects: updatedProjects }, proj.domain || 'Life', 'tasks', 100);
+    });
+  }
+
+  function addProjectTodo(projectId, text) {
+    setState(p => ({
+      ...p,
+      projects: p.projects.map(x => x.id !== projectId ? x : {
+        ...x,
+        projectTodos: [
+          ...(x.projectTodos || []),
+          { id: crypto.randomUUID(), text, done: false, createdAt: new Date().toISOString(), doneAt: null },
+        ],
+      }),
+    }));
+  }
+
+  function toggleProjectTodo(projectId, todoId) {
+    setState(p => ({
+      ...p,
+      projects: p.projects.map(x => x.id !== projectId ? x : {
+        ...x,
+        projectTodos: (x.projectTodos || []).map(t =>
+          t.id !== todoId ? t : { ...t, done: !t.done, doneAt: !t.done ? new Date().toISOString() : null }
+        ),
+      }),
+    }));
+  }
+
+  function deleteProjectTodo(projectId, todoId) {
+    setState(p => ({
+      ...p,
+      projects: p.projects.map(x => x.id !== projectId ? x : {
+        ...x,
+        projectTodos: (x.projectTodos || []).filter(t => t.id !== todoId),
+      }),
+    }));
+  }
+
+  function deleteProject(id) {
+    setState(p => ({ ...p, projects: p.projects.filter(x => x.id !== id) }));
   }
 
   function setIntentionText(v) {
@@ -497,7 +619,10 @@ export function useGameState() {
     setEnergy,
     setPomodoro,
     setApiKey, setGroqKey,
-    addProject, updateProjectProgress,
+    addProject, updateProject, updateProjectProgress,
+    addProjectEntry, deleteProjectEntry, deleteProject,
+    togglePinEntry, toggleResolveEntry, completeProject,
+    addProjectTodo, toggleProjectTodo, deleteProjectTodo,
     spawnFloat,
     addQuestline, completeQuestlineQuest, deleteQuestline,
     addBoss, completeBossPhase, deleteBoss,

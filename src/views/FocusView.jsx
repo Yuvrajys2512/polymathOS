@@ -5,6 +5,7 @@ export default function FocusView({
   identityModes, addIdentityMode, deleteIdentityMode,
   addDomain, deleteDomain,
   submitThought, apiKey,
+  projects, actProject, setActProject,
 }) {
   return (
     <div className="focus-view">
@@ -25,6 +26,9 @@ export default function FocusView({
         deleteDomain={deleteDomain}
         submitThought={submitThought}
         apiKey={apiKey}
+        projects={projects}
+        actProject={actProject}
+        setActProject={setActProject}
       />
     </div>
   );

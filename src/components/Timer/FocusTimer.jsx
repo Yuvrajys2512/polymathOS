@@ -394,6 +394,7 @@ export default function FocusTimer({
   identityModes, addIdentityMode, deleteIdentityMode,
   addDomain, deleteDomain,
   submitThought, apiKey,
+  projects, actProject, setActProject,
 }) {
   const {
     mode, running, remaining, totalSec,
@@ -534,6 +535,20 @@ export default function FocusTimer({
               <select value={actDomain} onChange={e => setActDomain(e.target.value)} style={{ width: 108, fontSize: 11 }}>
                 {domains.map(d => <option key={d.name}>{d.name}</option>)}
               </select>
+              {projects?.length > 0 && (
+                <select
+                  value={actProject || ''}
+                  onChange={e => setActProject?.(e.target.value || null)}
+                  disabled={running}
+                  className="focus-project-sel"
+                  title="Link session to a project"
+                >
+                  <option value="">no project</option>
+                  {projects.filter(p => p.status !== 'completed').map(p => (
+                    <option key={p.id} value={p.id}>{p.name.length > 18 ? p.name.slice(0, 18) + '…' : p.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 

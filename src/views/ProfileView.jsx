@@ -2,17 +2,30 @@ import { useMemo } from 'react';
 import { DOMAINS, DOMAIN_COLOR, XP_PER_LEVEL, ACHIEVEMENTS, CHAR_STATS, TIER_XP } from '../constants/index.js';
 import { xpToLevel, polymathScore } from '../utils/game.js';
 import { calcMomentumScore } from '../utils/momentum.js';
+import HabitStack from '../components/Habits/HabitStack.jsx';
+import DomainRadar from '../components/RadarChart/DomainRadar.jsx';
 
 const RANKS = [
-  { minLevel: 40, title: 'Polymath Ascendant', color: '#fbbf24' },
-  { minLevel: 30, title: 'The Synthesizer',    color: '#f472b6' },
-  { minLevel: 20, title: 'Knowledge Weaver',   color: '#a78bfa' },
-  { minLevel: 15, title: 'Cross-Domain Thinker', color: '#00d9b1' },
-  { minLevel: 10, title: 'Domain Explorer',    color: '#4ade80' },
-  { minLevel: 6,  title: 'Domain Apprentice',  color: '#60a5fa' },
-  { minLevel: 3,  title: 'Curious Seeker',     color: '#6b7280' },
-  { minLevel: 1,  title: 'The Wandering Mind', color: '#4b5563' },
+  { minLevel: 40, title: 'Polymath Ascendant',   color: '#fbbf24' },
+  { minLevel: 30, title: 'The Synthesizer',       color: '#f472b6' },
+  { minLevel: 20, title: 'Knowledge Weaver',      color: '#a78bfa' },
+  { minLevel: 15, title: 'Cross-Domain Thinker',  color: '#00d9b1' },
+  { minLevel: 10, title: 'Domain Explorer',       color: '#4ade80' },
+  { minLevel: 6,  title: 'Domain Apprentice',     color: '#60a5fa' },
+  { minLevel: 3,  title: 'Curious Seeker',        color: '#6b7280' },
+  { minLevel: 1,  title: 'The Wandering Mind',    color: '#4b5563' },
 ];
+
+const STAT_COLORS = {
+  streak:       '#f97316',
+  momentum:     '#00d9b1',
+  polymath:     '#a78bfa',
+  bosses:       '#f43f5e',
+  sessions:     '#60a5fa',
+  thoughts:     '#4ade80',
+  achievements: '#fbbf24',
+  domains:      '#818cf8',
+};
 
 function getrank(level) {
   return RANKS.find(r => level >= r.minLevel) || RANKS[RANKS.length - 1];
@@ -30,30 +43,103 @@ function calcTodayXP(state) {
   return thoughts + sessions + todos + tasks + habits;
 }
 
+function formatFocusTime(minutes) {
+  if (minutes === 0) return '0m';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 function XpBar({ current, max, color }) {
   const pct = max > 0 ? Math.min(100, (current / max) * 100) : 0;
   return (
     <div className="prof-xpbar-track">
-      <div
-        className="prof-xpbar-fill"
-        style={{ width: `${pct}%`, background: color || 'var(--accent)' }}
-      />
+      <div className="prof-xpbar-fill" style={{ width: `${pct}%`, background: color || 'var(--accent)' }} />
     </div>
   );
 }
 
-function StatBox({ icon, label, value, sub }) {
+function StatBox({ label, value, sub, color }) {
   return (
-    <div className="prof-stat-box">
-      <span className="prof-stat-icon">{icon}</span>
-      <span className="prof-stat-val">{value}</span>
+    <div className="prof-stat-box" style={{ '--sc': color || 'var(--accent)' }}>
+      <span className="prof-stat-val" style={{ color: color || 'var(--ink)' }}>{value}</span>
       <span className="prof-stat-label">{label}</span>
       {sub && <span className="prof-stat-sub">{sub}</span>}
     </div>
   );
 }
 
-export default function ProfileView({ state }) {
+function RankProgression({ level }) {
+  const nextRank = RANKS.find(r => r.minLevel > level);
+  const currentRank = getrank(level);
+  if (!nextRank) {
+    return (
+      <div className="prof-rank-prog">
+        <div className="prof-rank-prog-labels">
+          <span style={{ color: currentRank.color }}>MAX RANK ACHIEVED</span>
+        </div>
+      </div>
+    );
+  }
+  const prevMin = currentRank.minLevel;
+  const progress = Math.min(1, (level - prevMin) / Math.max(1, nextRank.minLevel - prevMin));
+  const levelsLeft = nextRank.minLevel - level;
+  return (
+    <div className="prof-rank-prog">
+      <div className="prof-rank-prog-labels">
+        <span className="prof-rank-prog-current" style={{ color: currentRank.color }}>{currentRank.title}</span>
+        <span className="prof-rank-prog-next" style={{ color: nextRank.color }}>
+          {nextRank.title} · Lv.{nextRank.minLevel}
+        </span>
+      </div>
+      <div className="prof-rank-prog-track">
+        <div className="prof-rank-prog-fill" style={{ width: `${progress * 100}%`, background: nextRank.color }} />
+      </div>
+      <div className="prof-rank-prog-sub">{levelsLeft} level{levelsLeft !== 1 ? 's' : ''} to next rank</div>
+    </div>
+  );
+}
+
+function SevenDayActivity({ sessions, thoughts }) {
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(Date.now() - (6 - i) * 86400000);
+    const str = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('en', { weekday: 'short' }).slice(0, 2).toUpperCase();
+    const isToday = str === todayStr();
+    const domainSet = new Set([
+      ...(sessions || []).filter(s => s.at?.startsWith(str)).map(s => s.domain),
+      ...(thoughts || []).filter(t => t.createdAt?.startsWith(str) && t.domain !== 'Sorting').map(t => t.domain),
+    ]);
+    return { str, label, isToday, domains: [...domainSet].filter(Boolean).slice(0, 5) };
+  }), [sessions, thoughts]);
+
+  return (
+    <div className="prof-7day">
+      {days.map(day => (
+        <div key={day.str} className={`prof-7day-col${day.isToday ? ' today' : ''}`}>
+          <div className="prof-7day-dots">
+            {day.domains.length > 0
+              ? day.domains.map(d => (
+                  <span
+                    key={d}
+                    className="prof-7day-dot"
+                    style={{ background: DOMAIN_COLOR[d] || 'var(--accent)' }}
+                    title={d}
+                  />
+                ))
+              : <span className="prof-7day-dot prof-7day-dot--empty" />
+            }
+          </div>
+          <div className="prof-7day-label">{day.label}</div>
+          {day.isToday && <div className="prof-7day-today-pip" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function ProfileView({ game }) {
+  const state = game.state;
   const today = todayStr();
 
   const totalXP = useMemo(
@@ -61,20 +147,29 @@ export default function ProfileView({ state }) {
     [state.xp]
   );
 
-  const level     = xpToLevel(totalXP);
-  const xpInLvl   = totalXP % XP_PER_LEVEL;
-  const rank      = getrank(level);
-  const todayXP   = useMemo(() => calcTodayXP(state), [state]);
-  const momentum  = useMemo(
+  const level      = xpToLevel(totalXP);
+  const xpInLvl    = totalXP % XP_PER_LEVEL;
+  const rank       = getrank(level);
+  const todayXP    = useMemo(() => calcTodayXP(state), [state]);
+  const momentum   = useMemo(
     () => calcMomentumScore(state.thoughts, state.taskBoard, state.sessions),
     [state.thoughts, state.taskBoard, state.sessions]
   );
-  const polyScore = useMemo(() => polymathScore(state.xp), [state.xp]);
+  const polyScore  = useMemo(() => polymathScore(state.xp), [state.xp]);
 
-  const bossKills    = (state.bosses || []).filter(b => b.defeated).length;
-  const achUnlocked  = (state.achievements || []).length;
-  const totalSess    = (state.sessions || []).length;
+  const bossKills     = (state.bosses || []).filter(b => b.defeated).length;
+  const achUnlocked   = (state.achievements || []).length;
+  const totalSess     = (state.sessions || []).length;
   const totalThoughts = (state.thoughts || []).length;
+  const bestStreak    = state.streak?.best || state.streak?.count || 0;
+  const totalMinutes  = useMemo(
+    () => (state.sessions || []).reduce((s, x) => s + (x.minutes || 0), 0),
+    [state.sessions]
+  );
+  const totalTasksDone = useMemo(
+    () => (state.taskBoard || []).filter(t => t.done).length + (state.todos || []).filter(t => t.done).length,
+    [state.taskBoard, state.todos]
+  );
 
   const todaySessions = (state.sessions || []).filter(s => s.at?.startsWith(today)).length;
   const todayCaptures = (state.thoughts || []).filter(t => t.createdAt?.startsWith(today)).length;
@@ -101,8 +196,8 @@ export default function ProfileView({ state }) {
     <div className="profile-view">
 
       {/* ── Hero Card ── */}
-      <div className="prof-hero">
-        <div className="prof-hero-avatar" style={{ '--rank-color': rank.color }}>
+      <div className="prof-hero" style={{ '--rank-color': rank.color }}>
+        <div className="prof-hero-avatar">
           <span className="prof-avatar-glyph">◆</span>
         </div>
 
@@ -126,6 +221,8 @@ export default function ProfileView({ state }) {
             </div>
           </div>
 
+          <RankProgression level={level} />
+
           {todayXP > 0 && (
             <div className="prof-today-xp">
               <span className="prof-today-badge">+{todayXP} XP today</span>
@@ -139,15 +236,24 @@ export default function ProfileView({ state }) {
 
       {/* ── Stats grid ── */}
       <div className="prof-stats-grid">
-        <StatBox icon="🔥" label="Streak"       value={state.streak?.count || 0} sub="days" />
-        <StatBox icon="⚡" label="Momentum"     value={`${momentum}%`} />
-        <StatBox icon="✦"  label="Polymath Pts" value={polyScore.toLocaleString()} />
-        <StatBox icon="⚔"  label="Boss Kills"   value={bossKills} />
-        <StatBox icon="◉"  label="Sessions"     value={totalSess} />
-        <StatBox icon="💡" label="Thoughts"     value={totalThoughts} />
-        <StatBox icon="🏆" label="Achievements" value={`${achUnlocked}/${ACHIEVEMENTS.length}`} />
-        <StatBox icon="◆"  label="Domains"      value={domainRows.filter(d => d.xp > 0).length} sub="active" />
+        <StatBox label="Streak"       value={state.streak?.count || 0} sub="days"    color={STAT_COLORS.streak} />
+        <StatBox label="Best Streak"  value={bestStreak}               sub="days"    color={STAT_COLORS.streak} />
+        <StatBox label="Momentum"     value={`${momentum}%`}                         color={STAT_COLORS.momentum} />
+        <StatBox label="Polymath Pts" value={polyScore.toLocaleString()}              color={STAT_COLORS.polymath} />
+        <StatBox label="Focus Time"   value={formatFocusTime(totalMinutes)}           color={STAT_COLORS.sessions} />
+        <StatBox label="Sessions"     value={totalSess}                               color={STAT_COLORS.sessions} />
+        <StatBox label="Thoughts"     value={totalThoughts}                           color={STAT_COLORS.thoughts} />
+        <StatBox label="Tasks Done"   value={totalTasksDone}                          color={STAT_COLORS.achievements} />
+        <StatBox label="Boss Kills"   value={bossKills}                               color={STAT_COLORS.bosses} />
+        <StatBox label="Achievements" value={`${achUnlocked}/${ACHIEVEMENTS.length}`} color={STAT_COLORS.achievements} />
+        <StatBox label="Active Domains" value={domainRows.filter(d => d.xp > 0).length} color={STAT_COLORS.domains} />
       </div>
+
+      {/* ── 7-Day Activity ── */}
+      <section className="prof-section">
+        <div className="prof-section-head">7-Day Domain Activity</div>
+        <SevenDayActivity sessions={state.sessions} thoughts={state.thoughts} />
+      </section>
 
       {/* ── Domain Mastery ── */}
       <section className="prof-section">
@@ -209,6 +315,77 @@ export default function ProfileView({ state }) {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* ── Habits & Energy ── */}
+      <section className="prof-section">
+        <HabitStack
+          habits={state.habits || []}
+          onToggle={game.toggleHabit}
+          onAdd={game.addHabit}
+          energyLog={state.energyLog || []}
+          onSetEnergy={game.setEnergy}
+        />
+      </section>
+
+      {/* ── Domain Radar ── */}
+      <section className="prof-section">
+        <DomainRadar
+          thoughts={state.thoughts || []}
+          taskBoard={state.taskBoard || []}
+          sessions={state.sessions || []}
+        />
+      </section>
+
+      {/* ── API Keys ── */}
+      <section className="prof-section">
+        <div className="prof-section-head">API Keys</div>
+        <div className="prof-api-grid">
+          <div className="panel">
+            <div className="panel-head">
+              <h2>Claude API</h2>
+              <span className="api-status">
+                <span className={`dot ${state.apiKey ? 'on' : 'off'}`} />
+                {state.apiKey ? 'connected' : 'local'}
+              </span>
+            </div>
+            <div className="api-row">
+              <input
+                type="password"
+                value={state.apiKey}
+                onChange={e => game.setApiKey(e.target.value)}
+                placeholder="sk-ant-…"
+              />
+              <button onClick={() => game.setApiKey('')}>Clear</button>
+            </div>
+            <p className="notice">
+              Used for thought classification. Without a key, local heuristics run instead.
+              Stored only in your browser.
+            </p>
+          </div>
+          <div className="panel">
+            <div className="panel-head">
+              <h2>Groq AI</h2>
+              <span className="api-status">
+                <span className={`dot ${state.groqKey ? 'on' : 'off'}`} />
+                {state.groqKey ? 'connected' : 'off'}
+              </span>
+            </div>
+            <div className="api-row">
+              <input
+                type="password"
+                value={state.groqKey}
+                onChange={e => game.setGroqKey(e.target.value)}
+                placeholder="gsk_…"
+              />
+              <button onClick={() => game.setGroqKey('')}>Clear</button>
+            </div>
+            <p className="notice">
+              Powers knowledge graph clustering and node synthesis (free tier at console.groq.com).
+              Stored only in your browser.
+            </p>
+          </div>
         </div>
       </section>
 

@@ -31,24 +31,34 @@ function parseInput(raw) {
   return { text: text.replace(/\s+/g, ' ').trim(), priority, estimate };
 }
 
-// ── Particle explosion on completion ────────────────────────────
-function fireExplosion(el) {
+// ── Sparkle burst on completion ──────────────────────────────────
+function fireSparkle(el) {
   if (!el) return;
   const rect = el.getBoundingClientRect();
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
-  const colors = ['#4ade80', '#00d9b1', '#fbbf24', '#a78bfa', '#f472b6'];
+  const colors = ['#ffffff', '#fbbf24', '#00d9b1', '#a78bfa', '#f9fafb', '#4ade80'];
+  const glyphs = ['✦', '✧', '·', '✦', '✧'];
   for (let i = 0; i < 18; i++) {
+    const angle = (i / 18) * Math.PI * 2 + (Math.random() - 0.5) * 0.7;
+    const dist  = 22 + Math.random() * 52;
+    const color = colors[i % colors.length];
     const p = document.createElement('div');
-    const size = 4 + Math.random() * 5;
-    p.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;border-radius:50%;background:${colors[i % colors.length]};pointer-events:none;z-index:9999;`;
+    if (i % 3 < 2) {
+      const fs = 7 + Math.random() * 9;
+      p.textContent = glyphs[i % glyphs.length];
+      p.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;font-size:${fs}px;color:${color};pointer-events:none;z-index:9999;line-height:1;text-shadow:0 0 8px ${color};`;
+    } else {
+      const sz = 2 + Math.random() * 3.5;
+      p.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:${sz}px;height:${sz}px;border-radius:50%;background:${color};pointer-events:none;z-index:9999;box-shadow:0 0 5px ${color};`;
+    }
     document.body.appendChild(p);
-    const angle = (i / 18) * Math.PI * 2 + Math.random() * 0.4;
-    const dist = 50 + Math.random() * 60;
+    const rot = (Math.random() - 0.5) * 540;
+    const dur = 420 + Math.random() * 280;
     p.animate([
-      { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
-      { transform: `translate(calc(-50% + ${Math.cos(angle) * dist}px),calc(-50% + ${Math.sin(angle) * dist}px)) scale(0)`, opacity: 0 },
-    ], { duration: 550 + Math.random() * 200, easing: 'cubic-bezier(0,0.9,0.57,1)', fill: 'forwards' }).onfinish = () => p.remove();
+      { transform: `translate(-50%,-50%) scale(1.2) rotate(0deg)`, opacity: 1 },
+      { transform: `translate(calc(-50% + ${Math.cos(angle)*dist}px),calc(-50% + ${Math.sin(angle)*dist}px)) scale(0) rotate(${rot}deg)`, opacity: 0 },
+    ], { duration: dur, easing: 'cubic-bezier(0,0.9,0.57,1)', fill: 'forwards' }).onfinish = () => p.remove();
   }
 }
 
@@ -186,7 +196,7 @@ function SubtaskRow({ sub, onToggle, onDelete, delay = 0 }) {
 }
 
 // ── Individual todo card ─────────────────────────────────────────
-function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDeleteSub, apiKey, onFocus, dragHandlers = {}, viewMode }) {
+function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDeleteSub, apiKey, onFocus, dragHandlers = {}, viewMode, completing = false }) {
   const [expanded,  setExpanded]  = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const itemRef  = useRef(null);
@@ -215,15 +225,16 @@ function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDelet
 
   function handleCheck() {
     if (todo.done) { onToggle(todo.id); return; }
-    fireExplosion(checkRef.current);
+    if (completing) return;
+    fireSparkle(checkRef.current);
     fireRipple(itemRef.current);
-    setTimeout(() => onToggle(todo.id), 380);
+    onToggle(todo.id);
   }
 
   return (
     <div
       ref={itemRef}
-      className={`todo-item energy-rail${todo.done ? ' done' : ''}${isOverdue ? ' overdue' : ''}${viewMode === 'board' ? ' board-card' : ''}`}
+      className={`todo-item energy-rail${todo.done ? ' done' : ''}${isOverdue ? ' overdue' : ''}${viewMode === 'board' ? ' board-card' : ''}${completing ? ' completing' : ''}`}
       style={{ '--pc': color, ...overdueStyle }}
       data-p={todo.priority}
       {...dragHandlers}
@@ -337,7 +348,8 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
   const [showVictory, setShowVictory] = useState(false);
   const [adaptSorted, setAdaptSorted] = useState(false);
   const [localOrder,  setLocalOrder]  = useState(null);
-  const [fireTs,      setFireTs]      = useState([]);
+  const [fireTs,        setFireTs]        = useState([]);
+  const [completingIds, setCompletingIds] = useState(() => new Set());
   const [todoScope,   setTodoScope]   = useState('daily');
   const inputRef    = useRef(null);
   const prevDoneRef = useRef(-1);
@@ -432,8 +444,16 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
 
   function handleToggle(id) {
     const todo = allTodos.find(t => t.id === id);
-    if (todo && !todo.done) setFireTs(prev => [...prev, Date.now()]);
-    toggleTodo(id);
+    if (todo && !todo.done) {
+      setFireTs(prev => [...prev, Date.now()]);
+      setCompletingIds(prev => new Set([...prev, id]));
+      setTimeout(() => {
+        toggleTodo(id);
+        setCompletingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+      }, 500);
+    } else {
+      toggleTodo(id);
+    }
   }
 
   async function handleSuggest() {
@@ -626,6 +646,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
                 <div className="board-col-body">
                   {col.tasks.map(t => (
                     <TodoItem key={t.id} todo={t} {...commonProps}
+                      completing={completingIds.has(t.id)}
                       dragHandlers={col.p !== 4 ? makeDrag(t.id, activeIds) : {}} />
                   ))}
                   {col.tasks.length === 0 && <div className="board-empty">—</div>}
@@ -640,6 +661,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
                 <div className="todo-view-section-label overdue-label">⚠ {labels.overdue} ({sortedOverdue.length})</div>
                 {sortedOverdue.map(t => (
                   <TodoItem key={t.id} todo={t} {...commonProps}
+                    completing={completingIds.has(t.id)}
                     dragHandlers={makeDrag(t.id, sortedOverdue.map(x => x.id))} />
                 ))}
               </section>
@@ -658,14 +680,16 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
                 </div>
               ) : (
                 sortedActive.map(t => (
-                  <TodoItem key={t.id} todo={t} {...commonProps} dragHandlers={makeDrag(t.id, activeIds)} />
+                  <TodoItem key={t.id} todo={t} {...commonProps}
+                    completing={completingIds.has(t.id)}
+                    dragHandlers={makeDrag(t.id, activeIds)} />
                 ))
               )}
             </section>
             {scopedDone.length > 0 && (
               <details className="todo-view-section todo-done-section" open={compRatio === 1 && scopedAll.length > 0}>
                 <summary className="todo-view-section-label done-label">✓ {labels.done} ({scopedDone.length})</summary>
-                {scopedDone.map(t => <TodoItem key={t.id} todo={t} {...commonProps} dragHandlers={{}} />)}
+                {scopedDone.map(t => <TodoItem key={t.id} todo={t} {...commonProps} completing={false} dragHandlers={{}} />)}
               </details>
             )}
           </>

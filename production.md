@@ -428,6 +428,10 @@ HOME MAIN AREA:
 | 2026-05-24 | Made Capture the hero element on home | #1 user action must have #1 visual weight |
 | 2026-05-24 | Added sidebar navigation | The core structural change that makes everything else possible |
 | 2026-05-24 | Specced AI Feature Builder for v2 | Users want to extend the app for their own workflows without code |
+| 2026-05-25 | Added best streak tracking to game state | `streak.best` now persists across resets; surfaced on Profile as a lifetime stat |
+| 2026-05-25 | Added 7-day domain activity strip to Profile | Makes cross-domain activity visible at a glance without raw numbers |
+| 2026-05-25 | Added rank progression bar to Profile hero | Gives players a clear "next goal" tied to their rank identity |
+| 2026-05-25 | Color-coded stat boxes in Profile | Each stat has a semantic color (streak=orange, focus=blue, etc.) — reduces monotony, improves scannability |
 
 ---
 

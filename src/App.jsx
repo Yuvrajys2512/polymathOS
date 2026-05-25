@@ -11,6 +11,7 @@ import ChaosMode      from './components/ChaosMode/ChaosMode.jsx';
 import BrainMap       from './components/BrainMap/BrainMap.jsx';
 import Forge          from './components/Forge/Forge.jsx';
 import MorningBrief   from './components/MorningBrief/MorningBrief.jsx';
+import TriageMode     from './components/Triage/TriageMode.jsx';
 import SerendipityEngine from './components/Serendipity/SerendipityEngine.jsx';
 import ToastStack     from './components/shared/ToastStack.jsx';
 import XpFloats       from './components/shared/XpFloats.jsx';
@@ -20,8 +21,8 @@ import FocusView      from './views/FocusView.jsx';
 import ThoughtsView   from './views/ThoughtsView.jsx';
 import TodoView       from './views/TodoView.jsx';
 import QuestsView     from './views/QuestsView.jsx';
-import CharacterView  from './views/CharacterView.jsx';
 import ProfileView    from './views/ProfileView.jsx';
+import ProjectsView   from './views/ProjectsView.jsx';
 
 function MainApp() {
   const game       = useGameState();
@@ -37,14 +38,18 @@ function MainApp() {
   const [chaosOpen,    setChaosOpen]    = useState(false);
   const [brainMapOpen, setBrainMapOpen] = useState(false);
   const [forgeOpen,    setForgeOpen]    = useState(false);
+  const [triageOpen,   setTriageOpen]   = useState(false);
+  const [triageThoughts, setTriageThoughts] = useState([]);
   const [briefOpen,    setBriefOpen]    = useState(() => {
     const seen = localStorage.getItem('polymath-brief-seen');
     return seen !== new Date().toISOString().split('T')[0];
   });
 
+  const [actProject, setActProject] = useState(null);
+
   const handleSessionFinish = useCallback((mode, focusMinutes, identityMode) => {
-    game.finishSession(mode, actDomain, focusMinutes, identityMode);
-  }, [game.finishSession, actDomain]);
+    game.finishSession(mode, actDomain, focusMinutes, identityMode, actProject);
+  }, [game.finishSession, actDomain, actProject]);
 
   const timer = useTimer(25, handleSessionFinish);
 
@@ -119,6 +124,9 @@ function MainApp() {
                 deleteDomain={game.deleteDomain}
                 submitThought={game.submitThought}
                 apiKey={game.state.apiKey}
+                projects={game.state.projects}
+                actProject={actProject}
+                setActProject={setActProject}
               />
             )}
             {activeView === 'thoughts' && (
@@ -134,6 +142,7 @@ function MainApp() {
                 updateThought={game.updateThought}
                 deleteThought={game.deleteThought}
                 onStartFocus={() => setActiveView('focus')}
+                onOpenTriage={thoughts => { setTriageThoughts(thoughts); setTriageOpen(true); }}
                 groqKey={game.state.groqKey}
               />
             )}
@@ -150,19 +159,30 @@ function MainApp() {
               />
             )}
             {activeView === 'quests' && (
-              <QuestsView game={game} />
+              <QuestsView
+                game={game}
+                onStartFocus={domain => { setActDomain(domain); setActiveView('focus'); }}
+              />
             )}
-            {activeView === 'character' && (
-              <CharacterView game={game} />
+            {activeView === 'projects' && (
+              <ProjectsView game={game} />
             )}
             {activeView === 'profile' && (
-              <ProfileView state={game.state} />
+              <ProfileView game={game} />
             )}
           </div>
         </div>
       </div>
 
       {/* Overlays */}
+      {triageOpen && (
+        <TriageMode
+          thoughts={triageThoughts}
+          updateThought={game.updateThought}
+          onClose={() => setTriageOpen(false)}
+          onStartFocus={() => { setTriageOpen(false); setActiveView('focus'); }}
+        />
+      )}
       {forgeOpen && (
         <Forge
           thoughts={game.state.thoughts}

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { TYPE_OPTS, PRIORITY_OPTS } from '../constants/index.js';
 import ThoughtCard from '../components/Thoughts/ThoughtCard.jsx';
 import ThoughtGraph from '../components/Thoughts/ThoughtGraph.jsx';
-import TriageMode from '../components/Triage/TriageMode.jsx';
 
 export default function ThoughtsView({
   visible, done,
@@ -14,11 +13,11 @@ export default function ThoughtsView({
   showDone, setShowDone,
   updateThought, deleteThought,
   onStartFocus,
+  onOpenTriage,
   groqKey,
 }) {
   const [filterVersion, setFilterVersion] = useState(0);
   const [exiting,       setExiting]       = useState([]);
-  const [triageOpen,    setTriageOpen]    = useState(false);
   const [viewMode,      setViewMode]      = useState('list'); // 'list' | 'graph'
   const prevVisibleRef = useRef(visible);
   const exitTimerRef   = useRef(null);
@@ -42,15 +41,6 @@ export default function ThoughtsView({
 
   return (
     <div className="thoughts-view">
-      {triageOpen && (
-        <TriageMode
-          thoughts={activeThoughtsForTriage}
-          updateThought={updateThought}
-          onClose={() => setTriageOpen(false)}
-          onStartFocus={onStartFocus}
-        />
-      )}
-
       <div className="view-header thoughts-view-header">
         <div className="tvh-left">
           <span className="view-title">THOUGHTS</span>
@@ -89,7 +79,7 @@ export default function ThoughtsView({
           {activeThoughtsForTriage.length >= 3 && (
             <button
               className="triage-trigger"
-              onClick={() => setTriageOpen(true)}
+              onClick={() => onOpenTriage && onOpenTriage(activeThoughtsForTriage)}
               title="Hyper-Triage: clear your backlog fast"
             >
               ⚡ Triage

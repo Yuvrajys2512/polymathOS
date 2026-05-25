@@ -36,9 +36,9 @@ export function updateStreak(streak) {
   const today = todayStr();
   if (streak.lastDate === today) return streak;
   const yday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  return streak.lastDate === yday
-    ? { count: streak.count + 1, lastDate: today }
-    : { count: 1, lastDate: today };
+  const newCount = streak.lastDate === yday ? streak.count + 1 : 1;
+  const best = Math.max(streak.best || 0, newCount);
+  return { count: newCount, lastDate: today, best };
 }
 
 export function advanceQuests(list, type, val = 1) {
