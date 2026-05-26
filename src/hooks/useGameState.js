@@ -693,7 +693,7 @@ export function useGameState() {
       expeditions: [
         {
           id: crypto.randomUUID(), goal, domain: domain || 'Learning',
-          milestones: (milestones || []).map(m => ({ id: crypto.randomUUID(), title: m.title, desc: m.desc || '', done: false })),
+          milestones: (milestones || []).map(m => ({ id: crypto.randomUUID(), title: m.title, desc: m.desc || '', difficulty: m.difficulty || 'medium', done: false })),
           completed: false, createdAt: new Date().toISOString(),
         },
         ...(p.expeditions || []),

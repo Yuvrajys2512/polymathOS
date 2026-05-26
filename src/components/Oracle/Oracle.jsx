@@ -44,7 +44,7 @@ export default function Oracle({ state, groqKey }) {
   const frameRef   = useRef(null);
   const phaseRef   = useRef('idle');
   const [question,  setQuestion]  = useState('');
-  const [phase,     setPhase]     = useState('idle'); // idle | thinking | answered
+  const [phase,     setPhase]     = useState('idle'); // idle | thinking | revealing | answered
   const [response,  setResponse]  = useState('');
   const [displayed, setDisplayed] = useState('');
 
@@ -83,21 +83,24 @@ export default function Oracle({ state, groqKey }) {
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content || 'The Oracle sees silence where there should be patterns.';
       setResponse(text);
+      setPhase('revealing');
     } catch {
       setResponse('The Oracle is unreachable. Verify your Groq API key in Profile.');
-    } finally {
       setPhase('answered');
     }
   }
 
-  // Typewriter reveal
+  // Typewriter reveal — runs during 'revealing', sets phase to 'answered' when done
   useEffect(() => {
-    if (phase !== 'answered' || !response) return;
+    if (phase !== 'revealing' || !response) return;
     let i = 0;
     const iv = setInterval(() => {
       setDisplayed(response.slice(0, i + 1));
       i++;
-      if (i >= response.length) clearInterval(iv);
+      if (i >= response.length) {
+        clearInterval(iv);
+        setPhase('answered');
+      }
     }, 14);
     return () => clearInterval(iv);
   }, [phase, response]);
@@ -120,7 +123,7 @@ export default function Oracle({ state, groqKey }) {
       ctx.clearRect(0, 0, W, H);
 
       const cx = W / 2, cy = H / 2;
-      const isThinking = phaseRef.current === 'thinking';
+      const isThinking = phaseRef.current === 'thinking' || phaseRef.current === 'revealing';
       const isAnswered = phaseRef.current === 'answered';
       const baseR = Math.min(W, H) * 0.26;
       const speed = isThinking ? 0.07 : 0.018;
@@ -199,7 +202,7 @@ export default function Oracle({ state, groqKey }) {
               ◌ consulting the patterns<span className="routing-cursor" />
             </p>
           )}
-          {phase === 'answered' && response && (
+          {(phase === 'revealing' || phase === 'answered') && response && (
             <p className="oracle-answer">
               {displayed}
               {displayed.length < response.length && <span className="routing-cursor" />}

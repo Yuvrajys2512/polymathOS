@@ -6,6 +6,12 @@ import Workbench from '../components/Workbench/Workbench.jsx';
 import Lab from '../components/Lab/Lab.jsx';
 import Expedition from '../components/Expedition/Expedition.jsx';
 import Council from '../components/Council/Council.jsx';
+import NeuralStorm from '../components/NeuralStorm/NeuralStorm.jsx';
+import QuantumCollapse from '../components/QuantumCollapse/QuantumCollapse.jsx';
+import CognitiveWeather from '../components/CognitiveWeather/CognitiveWeather.jsx';
+import EntropyEngine from '../components/EntropyEngine/EntropyEngine.jsx';
+import TheVoid from '../components/TheVoid/TheVoid.jsx';
+import SignalTower from '../components/SignalTower/SignalTower.jsx';
 
 const TABS = [
   { id: 'oracle',    icon: '◉', label: 'ORACLE'    },
@@ -16,6 +22,12 @@ const TABS = [
   { id: 'expedition',icon: '⟁', label: 'EXPEDITION'},
   { id: 'council',   icon: '⊜', label: 'COUNCIL'   },
   { id: 'memento',   icon: '◌', label: 'MEMENTO'   },
+  { id: 'neural',    icon: '⟆', label: 'NEURAL'    },
+  { id: 'quantum',   icon: '⧫', label: 'QUANTUM'   },
+  { id: 'weather',   icon: '⊗', label: 'WEATHER'   },
+  { id: 'entropy',   icon: '⁘', label: 'ENTROPY'   },
+  { id: 'void',      icon: '⬟', label: 'VOID'      },
+  { id: 'signal',    icon: '⋈', label: 'SIGNAL'    },
 ];
 
 // ── Memento Mori ─────────────────────────────────────────────────────────────
@@ -167,6 +179,12 @@ export default function CosmosView({ game }) {
         {active === 'lab'        && <Lab        game={game} />}
         {active === 'expedition' && <Expedition game={game} />}
         {active === 'council'    && <Council    game={game} />}
+        {active === 'neural'     && <NeuralStorm      game={game} />}
+        {active === 'quantum'    && <QuantumCollapse   game={game} />}
+        {active === 'weather'    && <CognitiveWeather  game={game} />}
+        {active === 'entropy'    && <EntropyEngine     game={game} />}
+        {active === 'void'       && <TheVoid           game={game} />}
+        {active === 'signal'     && <SignalTower       game={game} />}
         {active === 'memento' && (
           <MementoMori
             mementoMori={state.mementoMori}
