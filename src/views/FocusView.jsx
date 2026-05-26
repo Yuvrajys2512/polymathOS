@@ -4,7 +4,7 @@ export default function FocusView({
   actDomain, setActDomain, domains, timer, sessions,
   identityModes, addIdentityMode, deleteIdentityMode,
   addDomain, deleteDomain,
-  submitThought, apiKey,
+  submitThought, groqKey,
   projects, actProject, setActProject,
 }) {
   return (
@@ -25,7 +25,7 @@ export default function FocusView({
         addDomain={addDomain}
         deleteDomain={deleteDomain}
         submitThought={submitThought}
-        apiKey={apiKey}
+        groqKey={groqKey}
         projects={projects}
         actProject={actProject}
         setActProject={setActProject}

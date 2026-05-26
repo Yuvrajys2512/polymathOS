@@ -41,7 +41,7 @@ function getAdaptivePrompt(state) {
   return "Dump the raw thought. No categories, no cleanup.";
 }
 
-export default function HomeView({ game, captureRef, onViewAll, momentum = 0 }) {
+export default function HomeView({ game, captureRef, onViewAll, momentum = 0, onStorm }) {
   const [intentionLocal, setIntentionLocal] = useState(game.state.intention || '');
   useEffect(() => { setIntentionLocal(game.state.intention || ''); }, [game.state.intention]);
 
@@ -51,7 +51,7 @@ export default function HomeView({ game, captureRef, onViewAll, momentum = 0 }) 
   const [comboVisible, setComboVisible]   = useState(false);
   const comboTimerRef = useRef(null);
 
-  const handleCapture = useCallback((text, apiKey) => {
+  const handleCapture = useCallback((text, groqKey) => {
     const now = Date.now();
     setCaptureTimes(prev => {
       const recent = [...prev.filter(t => now - t < COMBO_WINDOW), now];
@@ -64,7 +64,7 @@ export default function HomeView({ game, captureRef, onViewAll, momentum = 0 }) 
       }
       return recent;
     });
-    game.submitThought(text, apiKey);
+    game.submitThought(text, groqKey);
   }, [game.submitThought]);
 
   useEffect(() => () => clearTimeout(comboTimerRef.current), []);
@@ -128,8 +128,9 @@ export default function HomeView({ game, captureRef, onViewAll, momentum = 0 }) 
           <CapturePanel
             captureRef={captureRef}
             onSubmit={handleCapture}
-            apiKey={game.state.apiKey}
+            groqKey={game.state.groqKey}
             placeholder={adaptivePrompt}
+            onStorm={onStorm}
           />
         </div>
       </div>

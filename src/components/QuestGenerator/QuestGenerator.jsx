@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DOMAIN_COLOR } from '../../constants/index.js';
 import { localGenerateQuestline, generateQuestlineWithClaude } from '../../utils/questGen.js';
 
-export default function QuestGenerator({ questlines, apiKey, onGenerate, onCompleteQuest, onDeleteQuestline, intention = '' }) {
+export default function QuestGenerator({ questlines, groqKey, onGenerate, onCompleteQuest, onDeleteQuestline, intention = '' }) {
   const [goal, setGoal]       = useState('');
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
@@ -12,8 +12,8 @@ export default function QuestGenerator({ questlines, apiKey, onGenerate, onCompl
     setLoading(true);
     try {
       let result;
-      if (apiKey) {
-        result = await generateQuestlineWithClaude(goal.trim(), apiKey);
+      if (groqKey) {
+        result = await generateQuestlineWithClaude(goal.trim(), groqKey);
       } else {
         result = localGenerateQuestline(goal.trim());
       }
@@ -64,11 +64,11 @@ export default function QuestGenerator({ questlines, apiKey, onGenerate, onCompl
               <span className="qgen-dot" /><span className="qgen-dot" /><span className="qgen-dot" />
             </span>
           ) : (
-            apiKey ? '✦ Generate' : '⚒ Build'
+            groqKey ? '✦ Generate' : '⚒ Build'
           )}
         </button>
       </div>
-      {!apiKey && (
+      {!groqKey && (
         <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
           No API key — using local quest templates.
         </p>

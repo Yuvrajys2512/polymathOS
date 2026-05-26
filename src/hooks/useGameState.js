@@ -13,6 +13,7 @@ const SEED = {
     { id: crypto.randomUUID(), name: 'Define research threads', goal: '', domain: 'Learning', status: 'active', progress: 10, createdAt: new Date().toISOString(), entries: [] },
   ],
   intention: '', intentionHistory: [], sessions: [], apiKey: '', groqKey: '',
+  mementoMori: { enabled: false, birthDate: null },
   pomodoro: { focusMinutes: 25, breakMinutes: 5 },
   domainList: DOMAINS,
   todos: [],
@@ -49,6 +50,7 @@ function loadState() {
         identityModes: s.identityModes?.length ? s.identityModes : IDENTITY_MODES,
         domainList: s.domainList?.length ? s.domainList : DOMAINS,
         todos: s.todos || [],
+        mementoMori: s.mementoMori || { enabled: false, birthDate: null },
         projects: (s.projects || SEED.projects).map(p => ({
           goal: '', domain: 'Life', status: 'active', targetDate: null,
           createdAt: new Date().toISOString(), entries: [], notes: '', projectTodos: [],
@@ -171,10 +173,10 @@ export function useGameState() {
     return list.map(name => ({ name, count: c[name] || 0 }));
   }, [state.thoughts, state.domainList]);
 
-  async function submitThought(text, apiKey) {
+  async function submitThought(text, groqKey, opts = {}) {
     if (!text.trim()) return;
     const id = crypto.randomUUID(), now = new Date().toISOString();
-    const pending = { id, text, domain: 'Sorting', type: 'note', insight: 'Classifying…', priority: 'medium', tags: [], status: 'pending', done: false, createdAt: now };
+    const pending = { id, text, domain: 'Sorting', type: 'note', insight: 'Classifying…', priority: 'medium', tags: [], status: 'pending', done: false, createdAt: now, superposition: opts.superposition || false };
     setState(p => {
       const fq = refreshQuests(p.quests);
       const ns = updateStreak(p.streak);
@@ -182,7 +184,7 @@ export function useGameState() {
       return { ...p, thoughts: [pending, ...p.thoughts], streak: ns, quests: { ...fq, list: ql } };
     });
     try {
-      const result = await classifyWithClaude(text, apiKey);
+      const result = await classifyWithClaude(text, groqKey);
       setState(p => {
         const today = todayStr();
         const newT = p.thoughts.map(t => t.id === id ? { ...t, ...result, status: 'ready' } : t);
@@ -580,6 +582,10 @@ export function useGameState() {
     });
   }
 
+  function setMementoMori(patch) {
+    setState(p => ({ ...p, mementoMori: { ...(p.mementoMori || {}), ...patch } }));
+  }
+
   function addIdentityMode(mode) {
     setState(p => ({ ...p, identityModes: [...(p.identityModes || IDENTITY_MODES), mode] }));
   }
@@ -627,6 +633,7 @@ export function useGameState() {
     addQuestline, completeQuestlineQuest, deleteQuestline,
     addBoss, completeBossPhase, deleteBoss,
     saveForge,
+    setMementoMori,
     addIdentityMode, deleteIdentityMode,
     addDomain, deleteDomain,
     addTodo, toggleTodo, deleteTodo,

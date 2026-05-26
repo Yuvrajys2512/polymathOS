@@ -324,7 +324,7 @@ function PastYouRivalry({ sessions, identityMode, elapsedMin, running, modeColor
 
 // ── SESSION QUICK CAPTURE ───────────────────────────────────────────────────
 
-function SessionCapture({ running, submitThought, apiKey }) {
+function SessionCapture({ running, submitThought, groqKey }) {
   const [text, setText]       = useState('');
   const [captured, setCaptured] = useState([]);
 
@@ -333,7 +333,7 @@ function SessionCapture({ running, submitThought, apiKey }) {
   function handle() {
     const t = text.trim();
     if (!t) return;
-    if (submitThought) submitThought(t, apiKey || '');
+    if (submitThought) submitThought(t, groqKey || '');
     setCaptured(prev => [{ id: crypto.randomUUID(), text: t }, ...prev].slice(0, 4));
     setText('');
   }
@@ -393,7 +393,7 @@ export default function FocusTimer({
   actDomain, setActDomain, domains, timer, sessions,
   identityModes, addIdentityMode, deleteIdentityMode,
   addDomain, deleteDomain,
-  submitThought, apiKey,
+  submitThought, groqKey,
   projects, actProject, setActProject,
 }) {
   const {
@@ -703,7 +703,7 @@ export default function FocusTimer({
           </div>
 
           {/* In-session thought capture */}
-          <SessionCapture running={running} submitThought={submitThought} apiKey={apiKey} />
+          <SessionCapture running={running} submitThought={submitThought} groqKey={groqKey} />
 
           {/* Today stats */}
           <div className="focus-log">

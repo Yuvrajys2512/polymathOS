@@ -277,7 +277,7 @@ export default function QuestsView({ game, onStartFocus }) {
           />
           <QuestGenerator
             questlines={game.state.questlines || []}
-            apiKey={game.state.apiKey}
+            groqKey={game.state.groqKey}
             onGenerate={game.addQuestline}
             onCompleteQuest={game.completeQuestlineQuest}
             onDeleteQuestline={game.deleteQuestline}

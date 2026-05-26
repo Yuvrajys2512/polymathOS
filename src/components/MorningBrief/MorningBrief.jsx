@@ -59,7 +59,7 @@ function buildContext(state) {
   };
 }
 
-async function generateBriefWithClaude(ctx, apiKey) {
+async function generateBriefWithClaude(ctx, groqKey) {
   const cached = localStorage.getItem(CACHE_KEY + todayStr());
   if (cached) return JSON.parse(cached);
 
@@ -81,23 +81,21 @@ Return ONLY valid JSON:
   "domain": "The domain to prioritize today based on context"
 }`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-      'content-type': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${groqKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'llama-3.1-8b-instant',
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
   if (!res.ok) throw new Error('API error');
   const data = await res.json();
-  const text = data.content?.[0]?.text || '';
+  const text = data.choices?.[0]?.message?.content || '';
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('No JSON');
   const result = JSON.parse(match[0]);
@@ -151,8 +149,8 @@ export default function MorningBrief({ state, onDismiss, onSetIntention }) {
   useEffect(() => {
     async function load() {
       try {
-        const result = state.apiKey
-          ? await generateBriefWithClaude(ctx, state.apiKey)
+        const result = state.groqKey
+          ? await generateBriefWithClaude(ctx, state.groqKey)
           : localBrief(ctx);
         setBrief(result);
       } catch {

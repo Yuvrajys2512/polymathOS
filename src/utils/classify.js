@@ -35,18 +35,16 @@ export function localClassify(text) {
   };
 }
 
-export async function classifyWithClaude(text, apiKey) {
-  if (!apiKey) return localClassify(text);
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+export async function classifyWithClaude(text, groqKey) {
+  if (!groqKey) return localClassify(text);
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${groqKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'llama-3.1-8b-instant',
       max_tokens: 220,
       messages: [{
         role: 'user',
@@ -59,7 +57,7 @@ export async function classifyWithClaude(text, apiKey) {
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   const data = await res.json();
-  const raw = data.content?.[0]?.text || '{}';
+  const raw = data.choices?.[0]?.message?.content || '{}';
   const p = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || raw);
   const fb = localClassify(text);
   return {

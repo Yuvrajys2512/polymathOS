@@ -83,7 +83,7 @@ function getSurprise(thoughts) {
 }
 
 // ── API call ─────────────────────────────────────────────────────
-async function synthesizeWithClaude(thoughts, apiKey, mode) {
+async function synthesizeWithClaude(thoughts, groqKey, mode) {
   const excerpts = thoughts.map((t, i) =>
     `[${i + 1}] Domain: ${t.domain} | Type: ${t.type}\n"${t.text}"\nInsight: ${t.insight || 'none'}`
   ).join('\n\n');
@@ -107,19 +107,17 @@ Return ONLY valid JSON:
 }
 
 No markdown. Just JSON.`;
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-      'content-type': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${groqKey}`,
     },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model: 'llama-3.3-70b-versatile', max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
   });
   if (!res.ok) throw new Error('API error');
   const data = await res.json();
-  const text = data.content?.[0]?.text || '';
+  const text = data.choices?.[0]?.message?.content || '';
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('No JSON');
   return JSON.parse(match[0]);
@@ -235,7 +233,7 @@ function InsightCard({ thought }) {
 }
 
 // ── Main component ────────────────────────────────────────────────
-export default function Forge({ thoughts, apiKey, onClose, onSaveForge }) {
+export default function Forge({ thoughts, groqKey, onClose, onSaveForge }) {
   const [mode,        setMode]        = useState('connect');
   const [selected,    setSelected]    = useState([]);
   const [manualOpen,  setManualOpen]  = useState(false);
@@ -290,8 +288,8 @@ export default function Forge({ thoughts, apiKey, onClose, onSaveForge }) {
     setResult(null);
     try {
       const [r] = await Promise.all([
-        apiKey
-          ? synthesizeWithClaude(items, apiKey, mode).catch(() => localSynthesize(items, mode))
+        groqKey
+          ? synthesizeWithClaude(items, groqKey, mode).catch(() => localSynthesize(items, mode))
           : localSynthesize(items, mode),
         new Promise(res => setTimeout(res, 2600)),
       ]);

@@ -7755,3 +7755,309 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
   .prof-7day { gap: 3px; }
   .prof-7day-dot { width: 6px; height: 6px; }
 }
+
+/* ── IDENTITY MODE AESTHETIC SHIFT ── */
+.app-shell[data-identity="research"] { --accent: #60a5fa; }
+.app-shell[data-identity="creative"] { --accent: #c084fc; }
+.app-shell[data-identity="locked"]   { --accent: #f87171; }
+.app-shell[data-identity="night"]    { --accent: #8b5cf6; }
+.app-shell[data-identity="sprint"]   { --accent: #fbbf24; }
+.app-shell[data-identity="builder"]  { --accent: #00d9b1; }
+
+/* ── QUANTUM SUPERPOSITION THOUGHTS ── */
+@keyframes super-shimmer {
+  0%   { background-position: 0% 50%;   opacity: 1;    }
+  50%  { background-position: 100% 50%; opacity: 0.88; }
+  100% { background-position: 0% 50%;   opacity: 1;    }
+}
+.thought { position: relative; }
+.thought-superposition {
+  background: linear-gradient(135deg,
+    rgba(167,139,250,0.09) 0%,
+    rgba(0,217,177,0.06) 50%,
+    rgba(167,139,250,0.09) 100%) !important;
+  background-size: 200% 200% !important;
+  animation: super-shimmer 3.4s ease infinite;
+  border-color: rgba(167,139,250,0.35) !important;
+}
+.super-pill {
+  background: rgba(167,139,250,0.16) !important;
+  color: #a78bfa !important;
+  border: 1px solid rgba(167,139,250,0.28);
+}
+
+/* ── CAPTURE PANEL ADDITIONS ── */
+.capture-super-btn {
+  padding: 3px 8px; font-size: 11px;
+  background: rgba(167,139,250,0.07);
+  border: 1px solid rgba(167,139,250,0.18);
+  border-radius: 4px; color: rgba(167,139,250,0.65);
+  cursor: pointer; transition: all 0.2s;
+}
+.capture-super-btn.active {
+  background: rgba(167,139,250,0.18);
+  border-color: rgba(167,139,250,0.45);
+  color: #a78bfa;
+  box-shadow: 0 0 10px rgba(167,139,250,0.22);
+}
+.capture-voice-btn {
+  padding: 3px 10px; font-size: 13px;
+  background: rgba(0,217,177,0.06);
+  border: 1px solid rgba(0,217,177,0.16);
+  border-radius: 4px; color: rgba(0,217,177,0.65);
+  cursor: pointer; transition: all 0.2s;
+}
+.capture-voice-btn.recording {
+  background: rgba(0,217,177,0.16);
+  border-color: rgba(0,217,177,0.45);
+  color: #00d9b1;
+  box-shadow: 0 0 12px rgba(0,217,177,0.28);
+}
+.voice-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; }
+.voice-wave span {
+  display: inline-block; width: 2px; background: #00d9b1;
+  border-radius: 1px; animation: voice-bar 0.7s ease-in-out infinite;
+}
+.voice-wave span:nth-child(1) { height: 6px;  animation-delay: 0s;    }
+.voice-wave span:nth-child(2) { height: 12px; animation-delay: 0.15s; }
+.voice-wave span:nth-child(3) { height: 8px;  animation-delay: 0.3s;  }
+.voice-wave span:nth-child(4) { height: 10px; animation-delay: 0.45s; }
+@keyframes voice-bar {
+  0%,100% { transform: scaleY(0.5); opacity: 0.6; }
+  50%     { transform: scaleY(1.4); opacity: 1;   }
+}
+.capture-storm-btn {
+  padding: 3px 8px; font-size: 13px;
+  background: rgba(251,191,36,0.07);
+  border: 1px solid rgba(251,191,36,0.18);
+  border-radius: 4px; color: rgba(251,191,36,0.75);
+  cursor: pointer; transition: all 0.2s;
+}
+.capture-storm-btn:active { transform: scale(0.93); }
+.capture-textarea-wrap { position: relative; }
+.voice-interim {
+  position: absolute; bottom: 8px; left: 10px; right: 10px;
+  font-size: 11px; color: rgba(0,217,177,0.5);
+  font-style: italic; pointer-events: none;
+}
+
+/* ── NEURAL STORM ── */
+.storm-backdrop {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.97);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.storm-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.storm-ui {
+  position: relative; z-index: 2;
+  width: 100%; max-width: 560px;
+  padding: 0 16px 24px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.storm-header { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.storm-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.12em;
+  color: #00d9b1; text-shadow: 0 0 12px rgba(0,217,177,0.5); flex: 1;
+}
+.storm-cap-count { font-size: 11px; color: rgba(0,217,177,0.55); font-family: monospace; }
+.storm-end-btn {
+  padding: 4px 10px; font-size: 10px; letter-spacing: 0.1em;
+  background: rgba(248,113,113,0.09); border: 1px solid rgba(248,113,113,0.22);
+  border-radius: 4px; color: rgba(248,113,113,0.65); cursor: pointer; transition: all 0.2s;
+}
+.storm-textarea {
+  width: 100%; min-height: 88px;
+  background: rgba(0,217,177,0.04);
+  border: 1px solid rgba(0,217,177,0.2);
+  border-radius: 8px; color: var(--ink);
+  font-size: 16px; line-height: 1.5; padding: 12px 14px;
+  resize: none; outline: none; font-family: var(--font);
+}
+.storm-textarea:focus { border-color: rgba(0,217,177,0.45); }
+.storm-fire-btn {
+  width: 100%; padding: 14px;
+  font-size: 15px; font-weight: 700; letter-spacing: 0.15em;
+  background: rgba(0,217,177,0.1); border: 1px solid rgba(0,217,177,0.32);
+  border-radius: 8px; color: #00d9b1; cursor: pointer; transition: all 0.15s;
+}
+.storm-fire-btn:active { transform: scale(0.97); background: rgba(0,217,177,0.2); }
+.storm-feed { display: flex; flex-direction: column; gap: 3px; }
+.storm-feed-item {
+  font-size: 11px; color: rgba(0,217,177,0.6); font-family: monospace;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.storm-report {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 40px 24px; max-width: 420px; text-align: center;
+}
+.storm-report-num {
+  font-size: 80px; font-weight: 900; font-family: monospace;
+  color: #00d9b1; line-height: 1;
+  text-shadow: 0 0 40px rgba(0,217,177,0.5);
+}
+.storm-report-label { font-size: 14px; letter-spacing: 0.15em; color: rgba(255,255,255,0.45); }
+.storm-report-list { width: 100%; display: flex; flex-direction: column; gap: 5px; margin: 8px 0; }
+.storm-report-item { display: flex; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.55); text-align: left; }
+.sri-bullet { color: #00d9b1; }
+.storm-report-more { font-size: 11px; color: rgba(255,255,255,0.28); font-style: italic; }
+
+/* ── COSMOS VIEW ── */
+.cosmos-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.cosmos-header { flex-shrink: 0; }
+.cosmos-tabs {
+  display: flex; gap: 4px; padding: 8px 16px; flex-shrink: 0;
+  overflow-x: auto; scrollbar-width: none;
+}
+.cosmos-tabs::-webkit-scrollbar { display: none; }
+.cosmos-tab {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 16px; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px; background: rgba(255,255,255,0.02);
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.cosmos-tab.active {
+  background: rgba(0,217,177,0.09); border-color: rgba(0,217,177,0.28);
+  box-shadow: 0 0 10px rgba(0,217,177,0.1);
+}
+.cosmos-tab-icon { font-size: 16px; color: var(--muted); transition: color 0.2s; }
+.cosmos-tab.active .cosmos-tab-icon { color: #00d9b1; }
+.cosmos-tab-label { font-size: 9px; letter-spacing: 0.1em; color: var(--muted); transition: color 0.2s; }
+.cosmos-tab.active .cosmos-tab-label { color: rgba(0,217,177,0.75); }
+.cosmos-body { flex: 1; overflow-y: auto; overflow-x: hidden; }
+
+/* ── ORACLE ── */
+.oracle-root { display: flex; flex-direction: column; align-items: center; }
+.oracle-canvas { width: 100%; height: 210px; display: block; }
+.oracle-ui { width: 100%; max-width: 520px; padding: 0 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.oracle-response-area {
+  min-height: 70px; padding: 14px 16px;
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;
+}
+.oracle-idle { font-size: 13px; color: rgba(255,255,255,0.32); line-height: 1.7; margin: 0; text-align: center; }
+.oracle-thinking { font-size: 12px; color: rgba(0,217,177,0.55); margin: 0; }
+.oracle-answer { font-size: 13px; color: rgba(255,255,255,0.82); line-height: 1.75; margin: 0; }
+.oracle-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.oracle-chip {
+  font-size: 10px; padding: 5px 10px;
+  background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px; color: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.2s; text-align: left;
+}
+.oracle-chip:active { background: rgba(0,217,177,0.08); border-color: rgba(0,217,177,0.22); color: rgba(0,217,177,0.65); }
+.oracle-input-row { display: flex; gap: 8px; }
+.oracle-input {
+  flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; color: var(--ink); font-size: 13px; padding: 9px 12px;
+  outline: none; font-family: var(--font);
+}
+.oracle-input:focus { border-color: rgba(0,217,177,0.38); }
+
+/* ── CONSCIOUSNESS TIMELINE ── */
+.timeline-root {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 0; height: calc(100vh - 200px); min-height: 300px;
+}
+.timeline-hint { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-align: center; padding: 0 16px; }
+.timeline-canvas { flex: 1; width: 100%; display: block; cursor: grab; touch-action: none; }
+.timeline-canvas:active { cursor: grabbing; }
+
+/* ── DNA HELIX ── */
+.dna-root { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; }
+.dna-hint { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-align: center; padding: 0 16px; }
+.dna-canvas { width: 100%; height: 230px; display: block; cursor: grab; touch-action: none; }
+.dna-canvas:active { cursor: grabbing; }
+.dna-detail {
+  margin: 8px 16px; padding: 14px;
+  background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08);
+  border-left: 3px solid var(--dc, var(--accent)); border-radius: 6px; position: relative;
+}
+.dna-detail-close { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
+.dna-detail-domain { font-size: 10px; letter-spacing: 0.1em; color: var(--dc, var(--accent)); margin-bottom: 5px; }
+.dna-detail-text   { font-size: 13px; color: var(--ink); line-height: 1.5; margin-bottom: 5px; }
+.dna-detail-insight{ font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.dna-detail-meta   { display: flex; gap: 6px; }
+
+/* ── GALAXY MAP ── */
+.galaxy-root { position: relative; }
+.galaxy-canvas { width: 100%; height: 310px; display: block; cursor: pointer; }
+.galaxy-detail {
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  flex-wrap: wrap; font-size: 11px;
+}
+.galaxy-d-domain { font-weight: 700; letter-spacing: 0.08em; color: var(--dc, var(--accent)); }
+.galaxy-d-sep    { color: var(--muted); }
+.galaxy-d-xp, .galaxy-d-tc { color: var(--muted); }
+.galaxy-d-active { color: var(--accent); font-size: 10px; }
+
+/* ── PROFILE GALAXY TOGGLE ── */
+.prof-section-head { display: flex; align-items: center; justify-content: space-between; }
+.prof-domain-toggle { display: flex; gap: 4px; }
+.pdt-btn {
+  padding: 3px 8px; font-size: 9px; letter-spacing: 0.08em;
+  background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 4px; color: var(--muted); cursor: pointer; transition: all 0.2s;
+}
+.pdt-btn.active { background: rgba(0,217,177,0.09); border-color: rgba(0,217,177,0.28); color: #00d9b1; }
+
+/* ── MEMENTO MORI ── */
+.memento-gate {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 40px 24px; text-align: center; max-width: 380px; margin: 0 auto;
+}
+.memento-gate-icon  { font-size: 36px; color: var(--muted); }
+.memento-gate-title { font-size: 18px; font-weight: 700; letter-spacing: 0.18em; color: rgba(255,255,255,0.65); }
+.memento-gate-body  { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.memento-setup {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 40px 24px; text-align: center;
+}
+.memento-setup-title { font-size: 16px; color: rgba(255,255,255,0.65); letter-spacing: 0.08em; }
+.memento-setup-sub   { font-size: 11px; color: var(--muted); }
+.memento-date-input {
+  padding: 10px 14px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+  color: var(--ink); font-size: 14px; font-family: var(--font); outline: none;
+}
+.memento-date-input:focus { border-color: rgba(0,217,177,0.38); }
+.memento-root {
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  padding: 32px 24px; text-align: center;
+}
+.memento-counter   { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.memento-days {
+  font-size: 64px; font-weight: 900; font-family: monospace;
+  color: rgba(255,255,255,0.82); line-height: 1; letter-spacing: -2px;
+}
+.memento-days-label { font-size: 10px; letter-spacing: 0.2em; color: var(--muted); }
+.memento-years-sub  { font-size: 12px; color: rgba(255,255,255,0.32); }
+.memento-bar-wrap   { width: 100%; max-width: 380px; }
+.memento-bar-track  { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.memento-bar-fill   { height: 100%; background: linear-gradient(90deg, #00d9b1, #a78bfa); border-radius: 2px; transition: width 0.5s ease; }
+.memento-bar-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); }
+.memento-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 380px; }
+.memento-stat {
+  display: flex; flex-direction: column; gap: 4px; padding: 12px 8px;
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;
+}
+.memento-stat-val { font-size: 22px; font-weight: 700; color: rgba(255,255,255,0.72); font-family: monospace; }
+.memento-stat-lbl { font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
+.memento-quote { font-size: 12px; color: rgba(255,255,255,0.25); font-style: italic; line-height: 1.7; max-width: 340px; }
+
+/* ── MOBILE NEW FEATURES ── */
+@media (max-width: 768px) {
+  .cosmos-tabs { padding: 6px 10px; }
+  .cosmos-tab  { padding: 7px 12px; }
+  .oracle-canvas { height: 170px; }
+  .dna-canvas    { height: 190px; }
+  .galaxy-canvas { height: 260px; }
+  .timeline-root { height: calc(100vh - 230px); min-height: 250px; }
+  .storm-ui      { padding: 0 12px 18px; }
+  .storm-textarea { font-size: 16px; min-height: 80px; }
+  .memento-days  { font-size: 50px; }
+  .memento-stats-grid { gap: 8px; }
+  .memento-stat-val { font-size: 17px; }
+  .prof-section-head { flex-wrap: wrap; gap: 8px; }
+  .prof-domain-toggle { margin-left: 0; }
+}

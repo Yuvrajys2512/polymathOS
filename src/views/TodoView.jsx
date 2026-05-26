@@ -196,7 +196,7 @@ function SubtaskRow({ sub, onToggle, onDelete, delay = 0 }) {
 }
 
 // ── Individual todo card ─────────────────────────────────────────
-function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDeleteSub, apiKey, onFocus, dragHandlers = {}, viewMode, completing = false }) {
+function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDeleteSub, groqKey, onFocus, dragHandlers = {}, viewMode, completing = false }) {
   const [expanded,  setExpanded]  = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const itemRef  = useRef(null);
@@ -214,10 +214,10 @@ function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDelet
   } : {};
 
   async function handleExpand() {
-    if (!apiKey) return;
+    if (!groqKey) return;
     setAiLoading(true);
     try {
-      const subs = await expandTask(todo.text, apiKey);
+      const subs = await expandTask(todo.text, groqKey);
       subs.forEach(text => onAddSubtask(todo.id, text));
       setExpanded(true);
     } finally { setAiLoading(false); }
@@ -256,7 +256,7 @@ function TodoItem({ todo, onToggle, onDelete, onAddSubtask, onToggleSub, onDelet
           )}
           {!todo.done && (
             <button className={`todo-ai-btn${aiLoading ? ' loading' : ''}`} onClick={handleExpand}
-              title={apiKey ? 'AI: break into subtasks' : 'Add API key in Character view'} disabled={!apiKey || aiLoading}>
+              title={groqKey ? 'AI: break into subtasks' : 'Add Groq API key in Profile'} disabled={!groqKey || aiLoading}>
               {aiLoading ? '⟳' : '✦'}
             </button>
           )}
@@ -457,10 +457,10 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
   }
 
   async function handleSuggest() {
-    if (!state.apiKey) { setSuggestErr('Set API key in Character view.'); setTimeout(() => setSuggestErr(''), 3000); return; }
+    if (!state.groqKey) { setSuggestErr('Add Groq API key in Profile to use AI suggestions.'); setTimeout(() => setSuggestErr(''), 3000); return; }
     setSuggesting(true); setSuggestErr('');
     try {
-      const suggs = await suggestTodos(state.thoughts || [], state.intention, state.apiKey);
+      const suggs = await suggestTodos(state.thoughts || [], state.intention, state.groqKey);
       if (!suggs.length) { setSuggestErr('No suggestions — capture more thoughts.'); setTimeout(() => setSuggestErr(''), 3500); return; }
       suggs.forEach(s => addTodo({ text: s.text, priority: s.priority || 2, scope: todoScope, date: scopeDate }));
     } catch { setSuggestErr('AI error — check API key.'); setTimeout(() => setSuggestErr(''), 3000); }
@@ -495,7 +495,7 @@ export default function TodoView({ state, addTodo, toggleTodo, deleteTodo, addSu
   const commonProps = {
     onToggle: handleToggle, onDelete: deleteTodo,
     onAddSubtask: addSubtask, onToggleSub: toggleSubtask, onDeleteSub: deleteSubtask,
-    apiKey: state.apiKey, onFocus: () => onNav?.('focus'), viewMode,
+    groqKey: state.groqKey, onFocus: () => onNav?.('focus'), viewMode,
   };
 
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });

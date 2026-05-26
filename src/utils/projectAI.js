@@ -1,6 +1,6 @@
-export async function getProjectAIAssist(project, apiKey) {
-  if (!apiKey) {
-    return { error: 'No Claude API key set. Add your key in Profile → API Keys to use AI Assist.' };
+export async function getProjectAIAssist(project, groqKey) {
+  if (!groqKey) {
+    return { error: 'No Groq API key set. Add your free key in Profile → AI Settings.' };
   }
 
   const entries = (project.entries || [])
@@ -33,24 +33,22 @@ Analyze this project and respond with exactly this structure:
 Be direct and specific. No fluff.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
+        'Authorization': `Bearer ${groqKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'llama-3.1-8b-instant',
         max_tokens: 400,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
     const data = await res.json();
     if (data.error) return { error: data.error.message || 'API error.' };
-    return { text: data.content?.[0]?.text || 'No response.' };
+    return { text: data.choices?.[0]?.message?.content || 'No response.' };
   } catch {
-    return { error: 'Request failed. Check your API key and network.' };
+    return { error: 'Request failed. Check your Groq API key and network.' };
   }
 }

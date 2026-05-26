@@ -23,6 +23,8 @@ import TodoView       from './views/TodoView.jsx';
 import QuestsView     from './views/QuestsView.jsx';
 import ProfileView    from './views/ProfileView.jsx';
 import ProjectsView   from './views/ProjectsView.jsx';
+import CosmosView     from './views/CosmosView.jsx';
+import NeuralStorm    from './components/NeuralStorm/NeuralStorm.jsx';
 
 function MainApp() {
   const game       = useGameState();
@@ -44,6 +46,7 @@ function MainApp() {
     const seen = localStorage.getItem('polymath-brief-seen');
     return seen !== new Date().toISOString().split('T')[0];
   });
+  const [stormOpen,    setStormOpen]    = useState(false);
 
   const [actProject, setActProject] = useState(null);
 
@@ -87,7 +90,7 @@ function MainApp() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-identity={timer.identityMode?.id || ''}>
       <TopBar state={game.state} onChaos={() => setChaosOpen(true)} />
 
       <div className={`shell-body${chaosOpen ? ' chaos-blur' : ''}`}>
@@ -108,6 +111,7 @@ function MainApp() {
                 captureRef={captureRef}
                 onViewAll={() => setActiveView('thoughts')}
                 momentum={calcMomentumScore(game.state.thoughts, game.state.taskBoard, game.state.sessions)}
+                onStorm={() => setStormOpen(true)}
               />
             )}
             {activeView === 'focus' && (
@@ -123,7 +127,7 @@ function MainApp() {
                 addDomain={game.addDomain}
                 deleteDomain={game.deleteDomain}
                 submitThought={game.submitThought}
-                apiKey={game.state.apiKey}
+                groqKey={game.state.groqKey}
                 projects={game.state.projects}
                 actProject={actProject}
                 setActProject={setActProject}
@@ -170,6 +174,9 @@ function MainApp() {
             {activeView === 'profile' && (
               <ProfileView game={game} />
             )}
+            {activeView === 'cosmos' && (
+              <CosmosView game={game} />
+            )}
           </div>
         </div>
       </div>
@@ -186,7 +193,7 @@ function MainApp() {
       {forgeOpen && (
         <Forge
           thoughts={game.state.thoughts}
-          apiKey={game.state.apiKey}
+          groqKey={game.state.groqKey}
           onClose={() => setForgeOpen(false)}
           onSaveForge={game.saveForge}
         />
@@ -210,6 +217,14 @@ function MainApp() {
           state={game.state}
           onDismiss={dismissBrief}
           onSetIntention={v => { game.saveIntention(v); dismissBrief(); }}
+        />
+      )}
+
+      {stormOpen && (
+        <NeuralStorm
+          onClose={() => setStormOpen(false)}
+          onSubmit={game.submitThought}
+          groqKey={game.state.groqKey}
         />
       )}
 

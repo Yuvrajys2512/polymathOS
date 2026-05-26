@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DOMAINS, DOMAIN_COLOR, XP_PER_LEVEL, ACHIEVEMENTS, CHAR_STATS, TIER_XP } from '../constants/index.js';
+import GalaxyMap from '../components/GalaxyMap/GalaxyMap.jsx';
 import { xpToLevel, polymathScore } from '../utils/game.js';
 import { calcMomentumScore } from '../utils/momentum.js';
 import HabitStack from '../components/Habits/HabitStack.jsx';
@@ -141,6 +142,7 @@ function SevenDayActivity({ sessions, thoughts }) {
 export default function ProfileView({ game }) {
   const state = game.state;
   const today = todayStr();
+  const [domainView, setDomainView] = useState('table'); // 'table' | 'galaxy'
 
   const totalXP = useMemo(
     () => DOMAINS.reduce((s, d) => s + (state.xp?.[d] || 0), 0),
@@ -257,20 +259,43 @@ export default function ProfileView({ game }) {
 
       {/* ── Domain Mastery ── */}
       <section className="prof-section">
-        <div className="prof-section-head">Domain Mastery</div>
-        <div className="prof-domains">
-          {domainRows.map(d => (
-            <div key={d.name} className="prof-domain-row">
-              <span className="prof-domain-dot" style={{ background: d.color }} />
-              <span className="prof-domain-name">{d.name}</span>
-              <span className="prof-domain-lv" style={{ color: d.color }}>Lv.{d.level}</span>
-              <div className="prof-domain-bar-wrap">
-                <XpBar current={d.inLvl} max={XP_PER_LEVEL} color={d.color} />
-              </div>
-              <span className="prof-domain-xp">{d.xp} XP</span>
-            </div>
-          ))}
+        <div className="prof-section-head">
+          Domain Mastery
+          <div className="prof-domain-toggle">
+            <button
+              className={`pdt-btn${domainView === 'table' ? ' active' : ''}`}
+              onClick={() => setDomainView('table')}
+            >≡ TABLE</button>
+            <button
+              className={`pdt-btn${domainView === 'galaxy' ? ' active' : ''}`}
+              onClick={() => setDomainView('galaxy')}
+            >◈ GALAXY</button>
+          </div>
         </div>
+
+        {domainView === 'table' && (
+          <div className="prof-domains">
+            {domainRows.map(d => (
+              <div key={d.name} className="prof-domain-row">
+                <span className="prof-domain-dot" style={{ background: d.color }} />
+                <span className="prof-domain-name">{d.name}</span>
+                <span className="prof-domain-lv" style={{ color: d.color }}>Lv.{d.level}</span>
+                <div className="prof-domain-bar-wrap">
+                  <XpBar current={d.inLvl} max={XP_PER_LEVEL} color={d.color} />
+                </div>
+                <span className="prof-domain-xp">{d.xp} XP</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {domainView === 'galaxy' && (
+          <GalaxyMap
+            xp={state.xp}
+            thoughts={state.thoughts || []}
+            sessions={state.sessions || []}
+          />
+        )}
       </section>
 
       {/* ── Achievements ── */}
@@ -338,54 +363,30 @@ export default function ProfileView({ game }) {
         />
       </section>
 
-      {/* ── API Keys ── */}
+      {/* ── AI Settings ── */}
       <section className="prof-section">
-        <div className="prof-section-head">API Keys</div>
-        <div className="prof-api-grid">
-          <div className="panel">
-            <div className="panel-head">
-              <h2>Claude API</h2>
-              <span className="api-status">
-                <span className={`dot ${state.apiKey ? 'on' : 'off'}`} />
-                {state.apiKey ? 'connected' : 'local'}
-              </span>
-            </div>
-            <div className="api-row">
-              <input
-                type="password"
-                value={state.apiKey}
-                onChange={e => game.setApiKey(e.target.value)}
-                placeholder="sk-ant-…"
-              />
-              <button onClick={() => game.setApiKey('')}>Clear</button>
-            </div>
-            <p className="notice">
-              Used for thought classification. Without a key, local heuristics run instead.
-              Stored only in your browser.
-            </p>
+        <div className="prof-section-head">AI Settings</div>
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Groq API Key</h2>
+            <span className="api-status">
+              <span className={`dot ${state.groqKey ? 'on' : 'off'}`} />
+              {state.groqKey ? 'connected' : 'off — using local fallbacks'}
+            </span>
           </div>
-          <div className="panel">
-            <div className="panel-head">
-              <h2>Groq AI</h2>
-              <span className="api-status">
-                <span className={`dot ${state.groqKey ? 'on' : 'off'}`} />
-                {state.groqKey ? 'connected' : 'off'}
-              </span>
-            </div>
-            <div className="api-row">
-              <input
-                type="password"
-                value={state.groqKey}
-                onChange={e => game.setGroqKey(e.target.value)}
-                placeholder="gsk_…"
-              />
-              <button onClick={() => game.setGroqKey('')}>Clear</button>
-            </div>
-            <p className="notice">
-              Powers knowledge graph clustering and node synthesis (free tier at console.groq.com).
-              Stored only in your browser.
-            </p>
+          <div className="api-row">
+            <input
+              type="password"
+              value={state.groqKey}
+              onChange={e => game.setGroqKey(e.target.value)}
+              placeholder="gsk_…"
+            />
+            <button onClick={() => game.setGroqKey('')}>Clear</button>
           </div>
+          <p className="notice">
+            Powers all AI features: thought classification, Oracle, Forge synthesis, quest generation, todo AI.
+            Free tier at <strong>console.groq.com</strong> — no credit card required. Stored only in your browser.
+          </p>
         </div>
       </section>
 

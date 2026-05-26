@@ -285,7 +285,7 @@ export default function ProjectsView({ game }) {
     if (!selected) return;
     setAiLoading(true);
     setAiResponse(null);
-    const result = await getProjectAIAssist(selected, game.state.apiKey);
+    const result = await getProjectAIAssist(selected, game.state.groqKey);
     setAiResponse(result);
     setAiLoading(false);
   }

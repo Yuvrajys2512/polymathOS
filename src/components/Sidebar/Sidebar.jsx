@@ -6,6 +6,7 @@ const NAV = [
   { id: 'quests',   icon: '⚔', label: 'Quests'   },
   { id: 'projects', icon: '▣', label: 'Projects' },
   { id: 'profile',  icon: '◆', label: 'Profile'  },
+  { id: 'cosmos',   icon: '∞', label: 'Cosmos'   },
 ];
 
 const OVERLAYS = [

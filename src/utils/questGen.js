@@ -46,7 +46,7 @@ export function localGenerateQuestline(goal) {
   };
 }
 
-export async function generateQuestlineWithClaude(goal, apiKey) {
+export async function generateQuestlineWithClaude(goal, groqKey) {
   const domain = inferDomain(goal);
   const prompt = `You are a game quest designer for POLYMATH OS — an ADHD-focused life gamification app.
 
@@ -70,24 +70,22 @@ Return ONLY valid JSON with this exact structure:
 
 XP rewards should range 40–150 based on difficulty/effort. No markdown, no explanation, just the JSON.`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-      'content-type': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${groqKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'llama-3.3-70b-versatile',
       max_tokens: 700,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
 
-  if (!res.ok) throw new Error('Claude API error');
+  if (!res.ok) throw new Error('Groq API error');
   const data = await res.json();
-  const text = data.content?.[0]?.text || '';
+  const text = data.choices?.[0]?.message?.content || '';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No JSON in response');
   const parsed = JSON.parse(jsonMatch[0]);

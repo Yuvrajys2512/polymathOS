@@ -17,7 +17,7 @@ export default function ThoughtCard({ thought, updateThought, deleteThought, ind
 
   return (
     <article
-      className={`thought${thought.done ? ' done' : ''}${ageClass}${isExiting ? ' is-exiting' : ''}`}
+      className={`thought${thought.done ? ' done' : ''}${ageClass}${isExiting ? ' is-exiting' : ''}${thought.superposition && !thought.done ? ' thought-superposition' : ''}`}
       style={{
         '--dc':         color,
         '--age-factor': ageFactor.toFixed(3),
@@ -34,6 +34,7 @@ export default function ThoughtCard({ thought, updateThought, deleteThought, ind
           <span className="pill typ">{thought.type}</span>
           <span className={`pill ${thought.priority}`}>{thought.priority}</span>
           {thought.status === 'pending' && <span className="pill pending">classifying…</span>}
+          {thought.superposition && !thought.done && <span className="pill super-pill">⟨ψ⟩ superposed</span>}
           {ageDays >= 7 && <span className="pill aged-pill critical">{ageDays}d old</span>}
           {ageDays >= 3 && ageDays < 7 && <span className="pill aged-pill warn">{ageDays}d old</span>}
         </div>
