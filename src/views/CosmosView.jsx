@@ -2,12 +2,20 @@ import { useState } from 'react';
 import Oracle from '../components/Oracle/Oracle.jsx';
 import ConsciousnessTimeline from '../components/ConsciousnessTimeline/ConsciousnessTimeline.jsx';
 import DNAHelix from '../components/DNAHelix/DNAHelix.jsx';
+import Workbench from '../components/Workbench/Workbench.jsx';
+import Lab from '../components/Lab/Lab.jsx';
+import Expedition from '../components/Expedition/Expedition.jsx';
+import Council from '../components/Council/Council.jsx';
 
 const TABS = [
-  { id: 'oracle',   icon: '◉', label: 'ORACLE'   },
-  { id: 'timeline', icon: '∿', label: 'TIMELINE' },
-  { id: 'dna',      icon: '⌬', label: 'DNA'      },
-  { id: 'memento',  icon: '◌', label: 'MEMENTO'  },
+  { id: 'oracle',    icon: '◉', label: 'ORACLE'    },
+  { id: 'timeline',  icon: '∿', label: 'TIMELINE'  },
+  { id: 'dna',       icon: '⌬', label: 'DNA'       },
+  { id: 'workbench', icon: '⊞', label: 'WORKBENCH' },
+  { id: 'lab',       icon: '⏣', label: 'LAB'       },
+  { id: 'expedition',icon: '⟁', label: 'EXPEDITION'},
+  { id: 'council',   icon: '⊜', label: 'COUNCIL'   },
+  { id: 'memento',   icon: '◌', label: 'MEMENTO'   },
 ];
 
 // ── Memento Mori ─────────────────────────────────────────────────────────────
@@ -155,6 +163,10 @@ export default function CosmosView({ game }) {
             thoughts={(state.thoughts || []).filter(t => !t.done)}
           />
         )}
+        {active === 'workbench'  && <Workbench  game={game} />}
+        {active === 'lab'        && <Lab        game={game} />}
+        {active === 'expedition' && <Expedition game={game} />}
+        {active === 'council'    && <Council    game={game} />}
         {active === 'memento' && (
           <MementoMori
             mementoMori={state.mementoMori}

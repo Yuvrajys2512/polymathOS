@@ -335,6 +335,7 @@ Always `crypto.randomUUID()`. Never Math.random(), never Date.now() as ID.
 - **Character page** — character sheet (INT/WIS/CRE/STR), domain tiles with XP bars, achievements grid, habit stack with streaks, energy level selector, domain radar chart, API key input
 - **Profile page** — rank title + level badge (8-tier rank system), full stats hero card, domain XP breakdown table, achievement display
 - **Core systems** — XP/leveling, streak, daily quests, achievements (12), daily brief modal, chaos mode overlay, brain map overlay, forge overlay, serendipity engine, toast notifications, XP float animations, capture particles
+- **Cosmos page** (`src/views/CosmosView.jsx`) — sub-tab hub. Tabs: Oracle (Groq Q&A about your mind), Timeline, DNA helix, **Workbench** (infinite spatial canvas — draggable note/thought nodes + hand-drawn edges, persisted in `state.workbench`), **Lab** (n=1 experiment tracker — `state.experiments`, animated canvas graph, Groq/local conclusion), **Expedition** (Groq-charted learning routes — `state.expeditions`, fog-of-war trail, milestone XP), **Council** (decision war room — `state.councilSessions`, AI advisor reveal + verdict), Memento Mori. Shared AI helper: `src/utils/cosmosAI.js` (`groqChat`, `parseJSON`).
 - **Mobile layout** — full responsive at ≤768px: bottom nav bar, safe area insets, touch targets, full-screen overlays
 
 ### Partially Built / Placeholder

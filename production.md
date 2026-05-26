@@ -432,6 +432,8 @@ HOME MAIN AREA:
 | 2026-05-25 | Added 7-day domain activity strip to Profile | Makes cross-domain activity visible at a glance without raw numbers |
 | 2026-05-25 | Added rank progression bar to Profile hero | Gives players a clear "next goal" tied to their rank identity |
 | 2026-05-25 | Color-coded stat boxes in Profile | Each stat has a semantic color (streak=orange, focus=blue, etc.) — reduces monotony, improves scannability |
+| 2026-05-26 | Built 4 Cosmos sub-tabs (Workbench, Lab, Expedition, Council) | See `cosmos.md`. All client-side, AI optional with local fallbacks, state through `useGameState` |
+| 2026-05-26 | Specced multi-user launch path (auth + JSONB persistence + deploy) | See Section 11. Goal: ship a beta so real users can sign up and leave reviews |
 
 ---
 
@@ -755,3 +757,86 @@ This is POLYMATH OS becoming an operating system in the real sense — not just 
 - [ ] Validate JSON schema on AI response before preview
 - [ ] Write empty states for both views
 - [ ] Test each widget type with real AI output
+
+---
+
+## 11 — Going Live: Accounts, Database & Deployment
+
+> Goal: turn the local-only SPA into a real multi-user web app — people sign up, their data is saved server-side, and they can leave reviews after using it.
+
+### 11.1 Why This Is Less Work Than It Looks
+
+Two properties of the current architecture make this dramatically cheaper than a typical "add a backend" job:
+
+1. **All state is one JSON blob.** `useGameState` keeps the entire app state under a single localStorage key (`polymath-os-v2`). We do **not** need to design normalized SQL tables — the whole state object goes into one `jsonb` column keyed by user. Schema design is essentially free.
+2. **Persistence is isolated to one file.** Per CLAUDE.md constraint #2, *only* `useGameState` touches localStorage. So the "save to a real database" rewrite happens in **one place**, not across the ~30 components.
+
+The app is also **fully usable without AI** — every AI feature already has a local fallback. That means we can ship a beta with *no AI backend at all* (see 11.4).
+
+### 11.2 What We Must Add
+
+| Piece | What it does | Rough effort |
+|---|---|---|
+| **Auth** | Email/password or magic-link login gating the app | ~half day |
+| **Database** | One row per user storing the state blob (`user_id` + `state jsonb` + `updated_at`) | ~few hours |
+| **Sync layer** | Load blob on login; debounced upsert on change (replaces the localStorage `useEffect`) | ~half day |
+| **Auth gate + loading states** | Splash/login screen, "loading your universe" state, sign-out | ~half day |
+| **Deploy** | Host the Vite build + set env vars | ~1 hour |
+| **Feedback** | Collect reviews | ~trivial (external form first; see 11.7) |
+
+### 11.3 Recommended Stack
+
+**Supabase** — auth + Postgres + `jsonb` + row-level security in a single free tier, and it works from a Vite SPA with no server of our own to run.
+
+- Requires adding `@supabase/supabase-js`. **This needs explicit approval** (CLAUDE.md constraint #1: no npm installs without sign-off). It is the only new runtime dependency this path requires.
+- Table: `profiles ( user_id uuid pk, state jsonb, updated_at timestamptz )`, with RLS so a user can only read/write their own row.
+- Alternatives considered: Firebase (Firestore) — fine, but Supabase's Postgres + JSONB maps more cleanly to "store the blob"; Clerk + a separate DB — more moving parts than needed for a beta.
+
+### 11.4 The One Real Decision — AI: Proxy vs Bring-Your-Own-Key
+
+Today AI calls go **straight from the browser** with a user-supplied Groq key (`state.groqKey`). For a public app there are two paths:
+
+| Option | UX | Backend needed | Who pays for AI | Verdict |
+|---|---|---|---|---|
+| **Keep BYO-key / AI optional** | Worse (user pastes a key) but app works fully without it | **None** | The user | **Recommended for beta** |
+| **Proxy through our own key** | Seamless | Yes — a serverless endpoint holding the key | **We do, for every user** | Defer to post-beta |
+
+**Decision:** Launch the beta with **auth + DB sync only**, leaving AI as optional/BYO-key. It is the leanest path to "people can sign up and use it," and the app's local fallbacks mean nothing is broken without AI. Adding the proxy later is a clean, separate step (~half day) that refactors the 5 existing call sites (`classify.js`, `Oracle.jsx`, and the 3 Cosmos AI features via `cosmosAI.js`) to hit our endpoint instead of Groq directly.
+
+> ⚠️ Do **not** ship our own Groq key in client code — it would be extractable from the browser bundle. The key must live server-side or stay BYO.
+
+### 11.5 The Sync Rewrite (the core code change, all in `useGameState`)
+
+- **On login:** fetch the user's `state` blob; if present, hydrate `useState` with it; if absent, seed from `SEED` (and offer to import any existing localStorage data — see 11.6).
+- **On change:** replace the current `localStorage.setItem` effect with a **debounced upsert** (e.g. 1–2s trailing) to avoid a DB write on every keystroke. Keep a localStorage write too, as an offline cache / instant-resume.
+- **Conflict handling (beta-simple):** last-write-wins keyed on `updated_at`. Multi-device real-time merge is explicitly out of scope for the beta.
+- **Offline:** keep working against localStorage; flush to DB when back online.
+
+### 11.6 Data Migration (localStorage → account)
+
+Existing/anonymous users already have a `polymath-os-v2` blob. On first login, if the account has no saved state but localStorage does, prompt: *"Import your existing progress into this account?"* → one-time upsert. Prevents the beta from feeling like it wiped their data.
+
+### 11.7 Collecting Reviews / Feedback
+
+Start with the **lowest-effort thing that works**: an external form (Tally / Typeform / Google Form) linked from a small "Feedback" item in the sidebar or profile. Ship that on day one. Only build in-app feedback infra if volume justifies it — don't block launch on it.
+
+### 11.8 Effort Estimate & Phasing
+
+- **Beta-ready (lean path):** ~**1–2 focused days** — Supabase auth + JSONB sync + migration + deploy + a feedback link.
+- **Post-beta polish:** AI proxy (~half day), real-time multi-device sync, password reset/email verification niceties, analytics.
+
+**Budget extra care for the fiddly bits:** the debounce (don't hammer the DB), the auth-gate/loading state, last-write-wins edge cases, and the first-login migration prompt.
+
+### 11.9 Build Checklist (Lean Beta Path)
+
+- [ ] Get approval to add `@supabase/supabase-js`
+- [ ] Create Supabase project; add `profiles` table + row-level security
+- [ ] Add env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
+- [ ] Build auth gate: login/signup screen + sign-out + loading state
+- [ ] Rewrite `useGameState` persistence: load-on-login + debounced upsert (keep localStorage cache)
+- [ ] First-login migration prompt (import existing localStorage blob)
+- [ ] Decide AI: confirm BYO-key for beta (no proxy)
+- [ ] Add a "Feedback" link (external form) in sidebar/profile
+- [ ] Deploy to Vercel/Netlify; verify build + env vars in prod
+- [ ] Smoke test: sign up → use app → reload → data persists → sign out/in on another device
+- [ ] (Post-beta) Add serverless AI proxy and migrate the 5 Groq call sites

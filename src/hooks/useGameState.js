@@ -29,6 +29,10 @@ const SEED = {
   questlines: [],
   bosses: [],
   identityModes: IDENTITY_MODES,
+  workbench: { nodes: [], edges: [] },
+  experiments: [],
+  expeditions: [],
+  councilSessions: [],
 };
 
 function loadState() {
@@ -51,6 +55,10 @@ function loadState() {
         domainList: s.domainList?.length ? s.domainList : DOMAINS,
         todos: s.todos || [],
         mementoMori: s.mementoMori || { enabled: false, birthDate: null },
+        workbench: s.workbench && Array.isArray(s.workbench.nodes) ? s.workbench : { nodes: [], edges: [] },
+        experiments: s.experiments || [],
+        expeditions: s.expeditions || [],
+        councilSessions: s.councilSessions || [],
         projects: (s.projects || SEED.projects).map(p => ({
           goal: '', domain: 'Life', status: 'active', targetDate: null,
           createdAt: new Date().toISOString(), entries: [], notes: '', projectTodos: [],
@@ -597,6 +605,135 @@ export function useGameState() {
     });
   }
 
+  // ── WORKBENCH ──────────────────────────────────────────────────────────────
+  function addWorkbenchNode(node) {
+    setState(p => ({
+      ...p,
+      workbench: {
+        ...(p.workbench || { nodes: [], edges: [] }),
+        nodes: [...(p.workbench?.nodes || []), { id: crypto.randomUUID(), kind: 'note', text: '', color: '#00d9b1', x: 0, y: 0, ...node }],
+      },
+    }));
+  }
+
+  function updateWorkbenchNode(id, patch) {
+    setState(p => ({
+      ...p,
+      workbench: {
+        ...(p.workbench || { nodes: [], edges: [] }),
+        nodes: (p.workbench?.nodes || []).map(n => n.id === id ? { ...n, ...patch } : n),
+      },
+    }));
+  }
+
+  function deleteWorkbenchNode(id) {
+    setState(p => ({
+      ...p,
+      workbench: {
+        nodes: (p.workbench?.nodes || []).filter(n => n.id !== id),
+        edges: (p.workbench?.edges || []).filter(ed => ed.from !== id && ed.to !== id),
+      },
+    }));
+  }
+
+  function addWorkbenchEdge(from, to) {
+    if (from === to) return;
+    setState(p => {
+      const edges = p.workbench?.edges || [];
+      if (edges.some(e => (e.from === from && e.to === to) || (e.from === to && e.to === from))) return p;
+      return { ...p, workbench: { ...(p.workbench || { nodes: [] }), edges: [...edges, { id: crypto.randomUUID(), from, to }] } };
+    });
+  }
+
+  function deleteWorkbenchEdge(id) {
+    setState(p => ({
+      ...p,
+      workbench: { ...(p.workbench || { nodes: [] }), edges: (p.workbench?.edges || []).filter(e => e.id !== id) },
+    }));
+  }
+
+  // ── LAB (experiments) ────────────────────────────────────────────────────────
+  function addExperiment({ title, hypothesis, variable, metric }) {
+    setState(p => ({
+      ...p,
+      experiments: [
+        { id: crypto.randomUUID(), title, hypothesis, variable, metric, status: 'running', logs: [], conclusion: '', createdAt: new Date().toISOString() },
+        ...(p.experiments || []),
+      ],
+    }));
+  }
+
+  function logExperiment(id, value, note = '') {
+    const today = todayStr();
+    setState(p => ({
+      ...p,
+      experiments: (p.experiments || []).map(x => x.id !== id ? x : {
+        ...x,
+        logs: [...(x.logs || []).filter(l => l.date !== today), { date: today, value: Number(value), note }]
+          .sort((a, b) => a.date.localeCompare(b.date)),
+      }),
+    }));
+  }
+
+  function concludeExperiment(id, conclusion) {
+    setState(p => {
+      const exp = (p.experiments || []).find(x => x.id === id);
+      if (!exp || exp.status === 'concluded') return p;
+      const updated = p.experiments.map(x => x.id === id ? { ...x, status: 'concluded', conclusion, concludedAt: new Date().toISOString() } : x);
+      return applyGame({ ...p, experiments: updated }, 'Learning', 'tasks', 50);
+    });
+  }
+
+  const deleteExperiment = id => setState(p => ({ ...p, experiments: (p.experiments || []).filter(x => x.id !== id) }));
+
+  // ── EXPEDITION ────────────────────────────────────────────────────────────────
+  function addExpedition({ goal, domain, milestones }) {
+    setState(p => ({
+      ...p,
+      expeditions: [
+        {
+          id: crypto.randomUUID(), goal, domain: domain || 'Learning',
+          milestones: (milestones || []).map(m => ({ id: crypto.randomUUID(), title: m.title, desc: m.desc || '', done: false })),
+          completed: false, createdAt: new Date().toISOString(),
+        },
+        ...(p.expeditions || []),
+      ],
+    }));
+  }
+
+  function completeExpeditionMilestone(expId, milestoneId, e) {
+    setState(p => {
+      const exp = (p.expeditions || []).find(x => x.id === expId);
+      if (!exp) return p;
+      const ms = exp.milestones.find(m => m.id === milestoneId);
+      if (!ms || ms.done) return p;
+      const newMs = exp.milestones.map(m => m.id === milestoneId ? { ...m, done: true } : m);
+      const allDone = newMs.every(m => m.done);
+      const newExps = p.expeditions.map(x =>
+        x.id === expId ? { ...x, milestones: newMs, completed: allDone, completedAt: allDone ? new Date().toISOString() : x.completedAt } : x
+      );
+      return applyGame({ ...p, expeditions: newExps }, exp.domain || 'Learning', 'tasks', allDone ? 80 : 30);
+    });
+    const exp = state.expeditions?.find(x => x.id === expId);
+    const ms = exp?.milestones?.find(m => m.id === milestoneId);
+    if (ms && !ms.done && e) spawnFloat(30, e);
+  }
+
+  const deleteExpedition = id => setState(p => ({ ...p, expeditions: (p.expeditions || []).filter(x => x.id !== id) }));
+
+  // ── COUNCIL ──────────────────────────────────────────────────────────────────
+  function addCouncilSession({ question, advisors, verdict }) {
+    setState(p => ({
+      ...p,
+      councilSessions: [
+        { id: crypto.randomUUID(), question, advisors, verdict, createdAt: new Date().toISOString() },
+        ...(p.councilSessions || []),
+      ].slice(0, 30),
+    }));
+  }
+
+  const deleteCouncilSession = id => setState(p => ({ ...p, councilSessions: (p.councilSessions || []).filter(x => x.id !== id) }));
+
   function saveForge({ text, insight, domain, tags, type, priority }) {
     setState(p => {
       const thought = {
@@ -633,6 +770,11 @@ export function useGameState() {
     addQuestline, completeQuestlineQuest, deleteQuestline,
     addBoss, completeBossPhase, deleteBoss,
     saveForge,
+    addWorkbenchNode, updateWorkbenchNode, deleteWorkbenchNode,
+    addWorkbenchEdge, deleteWorkbenchEdge,
+    addExperiment, logExperiment, concludeExperiment, deleteExperiment,
+    addExpedition, completeExpeditionMilestone, deleteExpedition,
+    addCouncilSession, deleteCouncilSession,
     setMementoMori,
     addIdentityMode, deleteIdentityMode,
     addDomain, deleteDomain,
