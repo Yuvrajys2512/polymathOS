@@ -2518,6 +2518,16 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
 .dot.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .dot.off { background: rgba(255,255,255,0.2); }
 .int-status { display: flex; align-items: center; gap: 5px; font-size: 11px; font-family: var(--mono); color: var(--muted); }
+.data-panel-btns { display: flex; gap: 8px; }
+.data-import-label {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 9px 14px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--panel);
+  border-radius: var(--radius-s); font-size: 13px; font-weight: 500;
+  color: var(--ink); transition: background 140ms ease, border-color 140ms ease;
+  text-align: center;
+}
+.data-import-label:hover { background: var(--panel-h); border-color: var(--border-h); }
 .groq-callout { background: rgba(20,184,166,0.08); border: 1px solid rgba(20,184,166,0.25); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
 .groq-callout-title { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 8px; letter-spacing: 0.04em; }
 .groq-callout-steps { font-size: 11px; color: var(--muted); line-height: 1.7; padding-left: 18px; margin: 0; }
@@ -2885,6 +2895,55 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
 .toast-eyebrow { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
 .toast-title { font-size: 13px; font-weight: 700; }
 .toast-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── SW UPDATE BANNER ── */
+.sw-update-banner {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(8,8,22,0.97);
+  border: 1px solid rgba(0,217,177,0.4);
+  border-radius: 99px;
+  box-shadow: 0 0 32px rgba(0,217,177,0.15), 0 8px 32px rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  z-index: 9999;
+  font-size: 13px;
+  color: var(--ink);
+  animation: swBannerIn 400ms cubic-bezier(0.16,1,0.3,1) both;
+  white-space: nowrap;
+}
+@keyframes swBannerIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.sw-update-btn {
+  background: var(--accent);
+  color: #021a16;
+  border: none;
+  border-radius: 99px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 150ms;
+}
+.sw-update-btn:hover { opacity: 0.85; transform: none; }
+.sw-update-dismiss {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  box-shadow: none;
+}
+.sw-update-dismiss:hover { color: var(--ink); background: none; transform: none; }
 
 /* ── XP FLOATS ── */
 .xp-float { position: fixed; pointer-events: none; z-index: 999; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--accent); text-shadow: 0 0 20px var(--accent), 0 0 40px rgba(0,217,177,0.5), 0 0 60px rgba(0,217,177,0.2); animation: floatUp 1.6s cubic-bezier(0.16,1,0.3,1) forwards; }

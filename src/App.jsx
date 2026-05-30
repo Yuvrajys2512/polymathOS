@@ -273,7 +273,31 @@ function MainApp() {
 }
 
 export default function App() {
-  const [landingUp, setLandingUp] = useState(() => !localStorage.getItem('polymath-entered'));
+  const [landingUp,   setLandingUp]   = useState(() => !localStorage.getItem('polymath-entered'));
+  const [swUpdate,    setSwUpdate]    = useState(false);
+  const swReg = useRef(null);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      swReg.current = reg;
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            setSwUpdate(true);
+          }
+        });
+      });
+    }).catch(() => {});
+  }, []);
+
+  function applyUpdate() {
+    if (swReg.current?.waiting) {
+      swReg.current.waiting.postMessage('SKIP_WAITING');
+    }
+    window.location.reload();
+  }
 
   function handleEnter() {
     localStorage.setItem('polymath-entered', '1');
@@ -284,6 +308,13 @@ export default function App() {
     <>
       <MainApp />
       {landingUp && <LandingPage onEnter={handleEnter} />}
+      {swUpdate && (
+        <div className="sw-update-banner">
+          <span>✦ New version available</span>
+          <button className="sw-update-btn" onClick={applyUpdate}>Update now</button>
+          <button className="sw-update-dismiss" onClick={() => setSwUpdate(false)}>×</button>
+        </div>
+      )}
     </>
   );
 }

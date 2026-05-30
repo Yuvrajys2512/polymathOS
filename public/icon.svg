@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#06060f"/>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#0d1a18"/>
+      <stop offset="100%" stop-color="#06060f"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#00d9b1" stroke-width="6" stroke-opacity="0.25"/>
+  <!-- Inner ring -->
+  <circle cx="256" cy="256" r="130" fill="none" stroke="#00d9b1" stroke-width="3" stroke-opacity="0.15"/>
+  <!-- Diamond -->
+  <polygon points="256,96 380,256 256,416 132,256"
+    fill="none" stroke="#00d9b1" stroke-width="8"
+    stroke-linejoin="round" filter="url(#glow)"/>
+  <!-- Inner diamond fill -->
+  <polygon points="256,140 350,256 256,372 162,256"
+    fill="#00d9b1" fill-opacity="0.08"/>
+  <!-- Center dot -->
+  <circle cx="256" cy="256" r="18" fill="#00d9b1" filter="url(#glow)"/>
+  <!-- Accent dots on diamond corners -->
+  <circle cx="256" cy="96"  r="7" fill="#00d9b1" opacity="0.9"/>
+  <circle cx="380" cy="256" r="7" fill="#00d9b1" opacity="0.9"/>
+  <circle cx="256" cy="416" r="7" fill="#00d9b1" opacity="0.9"/>
+  <circle cx="132" cy="256" r="7" fill="#00d9b1" opacity="0.9"/>
+</svg>

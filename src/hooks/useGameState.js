@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { DOMAINS, STORAGE_KEY, STORAGE_V1, DEFAULT_HABITS, TIER_XP, IDENTITY_MODES } from '../constants/index.js';
+import { idbSave, idbLoad } from '../utils/idb.js';
 import {
   todayStr, refreshQuests, updateStreak, advanceQuests, questBonusXP,
   findNewAchs, xpToLevel, refreshWeeklyQuest, advanceWeeklyQuest,
@@ -82,9 +83,41 @@ export function useGameState() {
   const [floats, setFloats] = useState([]);
   const pendingAchs = useRef([]);
 
+  // Primary save: localStorage (synchronous, instant)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const json = JSON.stringify(state);
+    localStorage.setItem(STORAGE_KEY, json);
+    // Secondary save: IndexedDB (async backup, survives browser cache clears)
+    idbSave(state);
   }, [state]);
+
+  // Recovery: if localStorage is empty on mount, restore from IndexedDB
+  useEffect(() => {
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    idbLoad().then(saved => {
+      if (!saved) return;
+      setState(prev => ({
+        ...SEED, ...saved,
+        xp: { ...SEED.xp, ...saved.xp },
+        taskBoard:        saved.taskBoard        || [],
+        habits:           saved.habits           || DEFAULT_HABITS,
+        energyLog:        saved.energyLog        || [],
+        questlines:       saved.questlines       || [],
+        bosses:           saved.bosses           || [],
+        todos:            saved.todos            || [],
+        weeklyQuest:      saved.weeklyQuest      || null,
+        mementoMori:      saved.mementoMori      || { enabled: false, birthDate: null },
+        workbench:        saved.workbench?.nodes ? saved.workbench : { nodes: [], edges: [] },
+        experiments:      saved.experiments      || [],
+        expeditions:      saved.expeditions      || [],
+        councilSessions:  saved.councilSessions  || [],
+        identityModes:    saved.identityModes?.length ? saved.identityModes : IDENTITY_MODES,
+        domainList:       saved.domainList?.length    ? saved.domainList    : DOMAINS,
+        streak:           { best: 0, ...(saved.streak || {}) },
+        dailyComboStreak: saved.dailyComboStreak || { count: 0, lastComboDate: null },
+      }));
+    });
+  }, []);
 
   useEffect(() => {
     setState(p => {
@@ -591,6 +624,28 @@ export function useGameState() {
     setState(p => ({ ...p, mementoMori: { ...(p.mementoMori || {}), ...patch } }));
   }
 
+  function exportData() {
+    const json = JSON.stringify(state, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `polymath-os-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        setState({ ...SEED, ...imported, xp: { ...SEED.xp, ...imported.xp } });
+      } catch { alert('Invalid backup file — make sure it is a POLYMATH OS export.'); }
+    };
+    reader.readAsText(file);
+  }
+
   function addIdentityMode(mode) {
     setState(p => ({ ...p, identityModes: [...(p.identityModes || IDENTITY_MODES), mode] }));
   }
@@ -779,5 +834,6 @@ export function useGameState() {
     addSubtask, toggleSubtask, deleteSubtask,
     weeklyQuest: state.weeklyQuest,
     dailyComboStreak: state.dailyComboStreak,
+    exportData, importData,
   };
 }

@@ -38,8 +38,38 @@ export default function CharacterView({ game }) {
           sessions={game.state.sessions || []}
         />
         <ApiKeyPanel game={game} />
+        <DataPanel game={game} />
       </div>
     </div>
+  );
+}
+
+function DataPanel({ game }) {
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <h2>Your Data</h2>
+        <span className="api-status">stored locally on this device</span>
+      </div>
+      <p className="notice" style={{ marginBottom: 12 }}>
+        Export a backup file you can restore anytime — on this device or another.
+        Your data never leaves your device unless you share the file.
+      </p>
+      <div className="data-panel-btns">
+        <button className="primary" style={{ flex: 1 }} onClick={game.exportData}>
+          ↓ Export Backup
+        </button>
+        <label className="data-import-label">
+          ↑ Import Backup
+          <input
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={e => { if (e.target.files[0]) game.importData(e.target.files[0]); }}
+          />
+        </label>
+      </div>
+    </section>
   );
 }
 
