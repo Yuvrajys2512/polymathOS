@@ -342,7 +342,7 @@ export default function FocusTimer({
         </button>
       )}
 
-      <div className="focus-layout">
+      <div className="focus-layout" style={{ gridTemplateColumns: running ? '1fr 284px' : '1fr' }}>
 
         {/* ── LEFT / MAIN PANEL ── */}
         <section

@@ -5648,8 +5648,11 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
   }
 
   .main-content {
-    padding: 16px 14px 80px; /* 80px bottom = clear the nav bar */
+    padding: 16px 14px 80px;
     overflow-y: auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   /* ── Sidebar → bottom nav ── */
@@ -5817,8 +5820,9 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
 
   /* ── Focus view ── */
   .focus-view { gap: 12px; }
-  .focus-layout { grid-template-columns: 1fr; gap: 12px; }
+  .focus-layout { grid-template-columns: 1fr !important; gap: 12px; }
   .focus-right-col { position: static; width: 100%; }
+  .timer-section { min-width: 0; width: 100%; overflow: hidden; }
   .flow-gauge-zones { display: none; }
   .void-restore-btn { bottom: 80px; }
 
