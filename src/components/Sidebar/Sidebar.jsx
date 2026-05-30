@@ -14,7 +14,7 @@ const OVERLAYS = [
   { id: 'brainmap', icon: '◎', label: 'Map',   kind: 'overlay' },
 ];
 
-export default function Sidebar({ activeView, onNav, onForge, onBrainMap, focusLocked, todoPendingCount }) {
+export default function Sidebar({ activeView, onNav, onForge, onBrainMap, onHelp, focusLocked, todoPendingCount }) {
   function handleOverlay(id) {
     if (id === 'forge')    onForge();
     if (id === 'brainmap') onBrainMap();
@@ -55,6 +55,13 @@ export default function Sidebar({ activeView, onNav, onForge, onBrainMap, focusL
             <span className="sidebar-label">{item.label}</span>
           </button>
         ))}
+      </div>
+
+      <div className="sidebar-help">
+        <button className="sidebar-item overlay" onClick={onHelp} title="Help / Tutorial">
+          <span className="sidebar-icon">?</span>
+          <span className="sidebar-label">Help</span>
+        </button>
       </div>
     </nav>
   );

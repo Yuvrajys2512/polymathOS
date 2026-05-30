@@ -2,7 +2,7 @@ import { DOMAINS } from '../constants/index.js';
 import { xpToLevel, polymathScore } from '../utils/game.js';
 import { calcMomentumScore, getMomentumTrend, getMomentumMeta } from '../utils/momentum.js';
 
-export default function TopBar({ state, onChaos }) {
+export default function TopBar({ state, onChaos, onTutorial }) {
   const totalXp   = DOMAINS.reduce((s, d) => s + (state.xp?.[d] || 0), 0);
   const maxLevel  = Math.max(...DOMAINS.map(d => xpToLevel(state.xp?.[d] || 0)));
   const score     = polymathScore(state.xp);
@@ -41,9 +41,12 @@ export default function TopBar({ state, onChaos }) {
         </div>
       </div>
 
-      <button className="chaos-trigger" onClick={onChaos}>
-        ⚡ Overwhelmed
-      </button>
+      <div className="topbar-actions">
+        <button className="tut-trigger" onClick={onTutorial}>Tutorial</button>
+        <button className="chaos-trigger" onClick={onChaos}>
+          ⚡ Overwhelmed
+        </button>
+      </div>
     </header>
   );
 }

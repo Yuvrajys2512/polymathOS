@@ -5,6 +5,7 @@ import { useTimer } from './hooks/useTimer.js';
 import { calcMomentumScore } from './utils/momentum.js';
 
 import LandingPage    from './components/Landing/LandingPage.jsx';
+import TutorialOverlay from './components/Tutorial/TutorialOverlay.jsx';
 import TopBar         from './components/TopBar.jsx';
 import Sidebar        from './components/Sidebar/Sidebar.jsx';
 import ChaosMode      from './components/ChaosMode/ChaosMode.jsx';
@@ -48,6 +49,7 @@ function MainApp() {
   });
   const [stormOpen,    setStormOpen]    = useState(false);
   const [serendipitySignal, setSerendipitySignal] = useState(null);
+  const [tutorialOpen, setTutorialOpen] = useState(() => !localStorage.getItem('polymath-tutorial-seen'));
 
   const [actProject, setActProject] = useState(null);
 
@@ -124,7 +126,7 @@ function MainApp() {
 
   return (
     <main className="app-shell" data-identity={timer.identityMode?.id || ''}>
-      <TopBar state={game.state} onChaos={() => setChaosOpen(true)} />
+      <TopBar state={game.state} onChaos={() => setChaosOpen(true)} onTutorial={() => setTutorialOpen(true)} />
 
       <div className={`shell-body${chaosOpen ? ' chaos-blur' : ''}`}>
         <Sidebar
@@ -132,6 +134,7 @@ function MainApp() {
           onNav={v => { if (!timer.running) setActiveView(v); }}
           onForge={() => setForgeOpen(true)}
           onBrainMap={() => setBrainMapOpen(true)}
+          onHelp={() => setTutorialOpen(true)}
           focusLocked={timer.running && activeView === 'focus'}
           todoPendingCount={(game.state.todos || []).filter(t => !t.done && t.date === new Date().toISOString().split('T')[0]).length}
         />
@@ -263,6 +266,10 @@ function MainApp() {
           onSubmit={game.submitThought}
           groqKey={game.state.groqKey}
         />
+      )}
+
+      {tutorialOpen && (
+        <TutorialOverlay onClose={() => setTutorialOpen(false)} />
       )}
 
       <SerendipityEngine thoughts={game.state.thoughts || []} captureSignal={serendipitySignal} />
