@@ -6,7 +6,7 @@ function getAgeDays(createdAt) {
   return Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000);
 }
 
-export default function ThoughtCard({ thought, updateThought, deleteThought, index = 0, isExiting = false }) {
+export default function ThoughtCard({ thought, updateThought, deleteThought, index = 0, isExiting = false, onSendToWorkbench, inWorkbench = false }) {
   const [editing, setEditing] = useState(false);
   const [text, setText]       = useState(thought.text);
   const color = DOMAIN_COLOR[thought.domain] || 'var(--accent)';
@@ -48,6 +48,14 @@ export default function ThoughtCard({ thought, updateThought, deleteThought, ind
             >
               {thought.done ? '↶' : '✓'}
             </button>
+          )}
+          {onSendToWorkbench && !thought.done && (
+            <button
+              className={`icon${inWorkbench ? ' ghost' : ''}`}
+              title={inWorkbench ? 'In Workbench' : 'Send to Workbench'}
+              style={{ opacity: inWorkbench ? 0.35 : 1 }}
+              onClick={() => !inWorkbench && onSendToWorkbench(thought)}
+            >⊞</button>
           )}
           <button className="icon ghost" title="Edit" onClick={() => setEditing(!editing)}>✎</button>
           <button className="icon danger" title="Delete" onClick={() => deleteThought(thought.id)}>×</button>

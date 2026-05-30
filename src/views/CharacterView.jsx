@@ -44,16 +44,27 @@ export default function CharacterView({ game }) {
 }
 
 function ApiKeyPanel({ game }) {
+  const hasKey = !!game.state.groqKey;
   return (
     <>
       <section className="panel">
         <div className="panel-head">
           <h2>Groq AI</h2>
           <span className="api-status">
-            <span className={`dot ${game.state.groqKey ? 'on' : 'off'}`} />
-            {game.state.groqKey ? 'connected' : 'off — using local fallbacks'}
+            <span className={`dot ${hasKey ? 'on' : 'off'}`} />
+            {hasKey ? 'connected' : 'off — using local fallbacks'}
           </span>
         </div>
+        {!hasKey && (
+          <div className="groq-callout">
+            <div className="groq-callout-title">AI features need a free Groq key</div>
+            <ol className="groq-callout-steps">
+              <li>Go to <strong>console.groq.com</strong> — takes 60 seconds, no credit card</li>
+              <li>Create an API key</li>
+              <li>Paste it below — it never leaves your device</li>
+            </ol>
+          </div>
+        )}
         <div className="api-row">
           <input
             type="password"
@@ -61,11 +72,11 @@ function ApiKeyPanel({ game }) {
             onChange={e => game.setGroqKey(e.target.value)}
             placeholder="gsk_…"
           />
-          <button onClick={() => game.setGroqKey('')}>Clear</button>
+          {hasKey && <button onClick={() => game.setGroqKey('')}>Clear</button>}
         </div>
         <p className="notice">
-          Powers all AI features: thought classification, Oracle, Forge, quests, todo AI.
-          Free tier at console.groq.com — no credit card needed. Stored only in your browser.
+          Powers Oracle, thought classification, quest generation, and todo AI.
+          Stored only in your browser.
         </p>
       </section>
     </>

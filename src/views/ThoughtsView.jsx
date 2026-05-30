@@ -15,6 +15,8 @@ export default function ThoughtsView({
   onStartFocus,
   onOpenTriage,
   groqKey,
+  sendToWorkbench,
+  workbenchIds,
 }) {
   const [filterVersion, setFilterVersion] = useState(0);
   const [exiting,       setExiting]       = useState([]);
@@ -148,6 +150,8 @@ export default function ThoughtsView({
                 index={i}
                 updateThought={updateThought}
                 deleteThought={deleteThought}
+                onSendToWorkbench={sendToWorkbench}
+                inWorkbench={workbenchIds?.has(t.id)}
               />
             ))}
           </div>

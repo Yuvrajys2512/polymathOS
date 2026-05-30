@@ -8,10 +8,7 @@ import { classifyWithClaude, localClassify } from '../utils/classify.js';
 
 const SEED = {
   thoughts: [],
-  projects: [
-    { id: crypto.randomUUID(), name: 'Build POLYMATH OS', goal: 'Ship the first public version', domain: 'AI/ML', status: 'active', progress: 20, createdAt: new Date().toISOString(), entries: [] },
-    { id: crypto.randomUUID(), name: 'Define research threads', goal: '', domain: 'Learning', status: 'active', progress: 10, createdAt: new Date().toISOString(), entries: [] },
-  ],
+  projects: [],
   intention: '', intentionHistory: [], sessions: [], apiKey: '', groqKey: '',
   mementoMori: { enabled: false, birthDate: null },
   pomodoro: { focusMinutes: 25, breakMinutes: 5 },

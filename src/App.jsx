@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { DOMAINS } from './constants/index.js';
+import { DOMAINS, DOMAIN_COLOR } from './constants/index.js';
 import { useGameState } from './hooks/useGameState.js';
 import { useTimer } from './hooks/useTimer.js';
 import { calcMomentumScore } from './utils/momentum.js';
@@ -47,8 +47,41 @@ function MainApp() {
     return seen !== new Date().toISOString().split('T')[0];
   });
   const [stormOpen,    setStormOpen]    = useState(false);
+  const [serendipitySignal, setSerendipitySignal] = useState(null);
 
   const [actProject, setActProject] = useState(null);
+
+  // Track when thoughts finish classifying → fire serendipity for that domain
+  const prevPendingRef = useRef(new Set());
+  useEffect(() => {
+    const thoughts = game.state.thoughts || [];
+    const nowPending = new Set(thoughts.filter(t => t.status === 'pending').map(t => t.id));
+    const justClassified = [...prevPendingRef.current].filter(id => !nowPending.has(id));
+    if (justClassified.length > 0) {
+      const thought = thoughts.find(t => justClassified.includes(t.id));
+      if (thought?.domain && thought.domain !== 'Sorting') {
+        setSerendipitySignal({ domain: thought.domain, thoughtId: thought.id, ts: Date.now() });
+      }
+    }
+    prevPendingRef.current = nowPending;
+  }, [game.state.thoughts]);
+
+  // Workbench helpers passed down to thought lists
+  const workbenchIds = useMemo(() =>
+    new Set((game.state.workbench?.nodes || []).filter(n => n.thoughtId).map(n => n.thoughtId)),
+    [game.state.workbench]
+  );
+  const sendToWorkbench = useCallback((thought) => {
+    if (workbenchIds.has(thought.id)) return;
+    const nodeCount = game.state.workbench?.nodes?.length || 0;
+    const x = 120 + (nodeCount % 5) * 260;
+    const y = 120 + Math.floor(nodeCount / 5) * 180;
+    game.addWorkbenchNode({
+      kind: 'thought', text: thought.text,
+      color: DOMAIN_COLOR[thought.domain] || '#00d9b1',
+      domain: thought.domain, thoughtId: thought.id, x, y,
+    });
+  }, [workbenchIds, game.state.workbench, game.addWorkbenchNode]);
 
   const handleSessionFinish = useCallback((mode, focusMinutes, identityMode) => {
     game.finishSession(mode, actDomain, focusMinutes, identityMode, actProject);
@@ -112,6 +145,8 @@ function MainApp() {
                 onViewAll={() => setActiveView('thoughts')}
                 momentum={calcMomentumScore(game.state.thoughts, game.state.taskBoard, game.state.sessions)}
                 onStorm={() => setStormOpen(true)}
+                sendToWorkbench={sendToWorkbench}
+                workbenchIds={workbenchIds}
               />
             )}
             {activeView === 'focus' && (
@@ -148,6 +183,8 @@ function MainApp() {
                 onStartFocus={() => setActiveView('focus')}
                 onOpenTriage={thoughts => { setTriageThoughts(thoughts); setTriageOpen(true); }}
                 groqKey={game.state.groqKey}
+                sendToWorkbench={sendToWorkbench}
+                workbenchIds={workbenchIds}
               />
             )}
             {activeView === 'todo' && (
@@ -228,7 +265,7 @@ function MainApp() {
         />
       )}
 
-      <SerendipityEngine thoughts={game.state.thoughts || []} />
+      <SerendipityEngine thoughts={game.state.thoughts || []} captureSignal={serendipitySignal} />
       <ToastStack toasts={game.toasts} dismiss={id => game.setToasts(p => p.filter(t => t.tid !== id))} />
       <XpFloats floats={game.floats} />
     </main>

@@ -5,6 +5,36 @@ import ThoughtCard   from '../components/Thoughts/ThoughtCard.jsx';
 import MomentumOrb   from '../components/MomentumOrb/MomentumOrb.jsx';
 import { DOMAINS, DOMAIN_COLOR, TIER_XP } from '../constants/index.js';
 
+const STOPWORDS = new Set(['about','their','there','would','could','should','think','where','which','these','those','other','after','before','while','still','every','first','since','your','have','this','that','with','from','they','will','what','when','into','more','like','just','been','also','over','than','then','very','only','both','each','such','same','through','here','even','well','know','time','people','work','want','need','feel','make','does','made','really','something','anything','nothing','everything']);
+
+function findConnections(thought, allThoughts) {
+  const keywords = thought.text.toLowerCase()
+    .split(/\W+/)
+    .filter(w => w.length > 4 && !STOPWORDS.has(w));
+  if (keywords.length === 0) return [];
+  const origin = new Date(thought.createdAt).getTime();
+  return allThoughts
+    .filter(t => t.id !== thought.id && !t.done && t.status !== 'pending' && new Date(t.createdAt).getTime() < origin)
+    .map(t => {
+      const tWords = new Set(t.text.toLowerCase().split(/\W+/));
+      return { t, score: keywords.filter(w => tWords.has(w)).length };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ t }) => t);
+}
+
+function DashStat({ value, label, icon, color, hot = false }) {
+  return (
+    <div className={`dash-stat${hot ? ' dash-stat--hot' : ''}`} style={{ '--sc': color }}>
+      <span className="ds-icon">{icon}</span>
+      <span className="ds-value">{value}</span>
+      <span className="ds-label">{label}</span>
+    </div>
+  );
+}
+
 const COMBO_WINDOW = 3 * 60 * 1000; // 3 min
 const COMBO_NAMES  = ['', '', 'DOUBLE TAP', 'THOUGHT STORM', 'MIND FLOOD', 'NEURAL BURST', 'OMEGA SURGE'];
 const COMBO_XP     = [0, 0, 20, 45, 80, 120, 200];
@@ -41,9 +71,36 @@ function getAdaptivePrompt(state) {
   return "Dump the raw thought. No categories, no cleanup.";
 }
 
-export default function HomeView({ game, captureRef, onViewAll, momentum = 0, onStorm }) {
+export default function HomeView({ game, captureRef, onViewAll, momentum = 0, onStorm, sendToWorkbench, workbenchIds }) {
   const [intentionLocal, setIntentionLocal] = useState(game.state.intention || '');
   useEffect(() => { setIntentionLocal(game.state.intention || ''); }, [game.state.intention]);
+
+  /* ── Thought connections ── */
+  const [connections, setConnections]   = useState([]);
+  const [connAnchor,  setConnAnchor]    = useState(null);
+  const connTimerRef   = useRef(null);
+  const prevPendingRef = useRef(new Set());
+
+  useEffect(() => {
+    const thoughts = game.state.thoughts || [];
+    const nowPending = new Set(thoughts.filter(t => t.status === 'pending').map(t => t.id));
+    const justClassified = [...prevPendingRef.current].filter(id => !nowPending.has(id));
+    if (justClassified.length > 0) {
+      const thought = thoughts.find(t => justClassified.includes(t.id));
+      if (thought) {
+        const conns = findConnections(thought, thoughts);
+        if (conns.length > 0) {
+          setConnAnchor(thought);
+          setConnections(conns);
+          clearTimeout(connTimerRef.current);
+          connTimerRef.current = setTimeout(() => { setConnections([]); setConnAnchor(null); }, 10000);
+        }
+      }
+    }
+    prevPendingRef.current = nowPending;
+  }, [game.state.thoughts]);
+
+  useEffect(() => () => clearTimeout(connTimerRef.current), []);
 
   /* ── Combo counter ── */
   const [captureTimes, setCaptureTimes]   = useState([]);
@@ -86,6 +143,16 @@ export default function HomeView({ game, captureRef, onViewAll, momentum = 0, on
   ].length, [game.state.todos, game.state.taskBoard, today]);
 
   const streak = game.state.streak?.count || 0;
+
+  const activeDomains = useMemo(() => {
+    const counts = {};
+    (game.state.thoughts || [])
+      .filter(t => t.createdAt?.startsWith(today) && t.domain && t.domain !== 'Sorting')
+      .forEach(t => { counts[t.domain] = (counts[t.domain] || 0) + 1; });
+    const entries = Object.entries(counts).sort(([,a],[,b]) => b - a);
+    const max = entries[0]?.[1] || 1;
+    return entries.map(([name, count]) => ({ name, count, pct: Math.round((count / max) * 100) }));
+  }, [game.state.thoughts, today]);
 
   const adaptivePrompt = useMemo(() => getAdaptivePrompt(game.state), [
     game.state.thoughts, game.state.sessions, game.state.xp
@@ -135,77 +202,92 @@ export default function HomeView({ game, captureRef, onViewAll, momentum = 0, on
         </div>
       </div>
 
-      {/* Intention */}
-      <div className="intention-row">
-        <span className="intention-label">TODAY'S INTENTION</span>
+      {/* Thought connections */}
+      {connections.length > 0 && (
+        <div className="conn-panel">
+          <div className="conn-header">
+            <span className="conn-label">⟆ Connects to {connections.length} older thought{connections.length > 1 ? 's' : ''}</span>
+            <button className="conn-dismiss" onClick={() => { setConnections([]); setConnAnchor(null); }}>×</button>
+          </div>
+          {connections.map(t => (
+            <div key={t.id} className="conn-item" style={{ '--dc': DOMAIN_COLOR[t.domain] || 'var(--accent)' }}>
+              <span className="conn-domain">{t.domain}</span>
+              <span className="conn-text">{t.text.length > 72 ? t.text.slice(0, 72) + '…' : t.text}</span>
+              <span className="conn-age">{Math.max(1, Math.floor((Date.now() - new Date(t.createdAt).getTime()) / 86400000))}d</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Intention banner */}
+      <div className={`intention-banner${intentionLocal ? ' has-intention' : ''}`}>
+        <span className="ib-label">◈ MISSION</span>
         <input
-          className="intention-input"
+          className="ib-input"
           value={intentionLocal}
           onChange={e => { setIntentionLocal(e.target.value); game.setIntentionText(e.target.value); }}
           onBlur={e => game.saveIntention(e.target.value)}
-          placeholder="One sentence that defines today…"
+          placeholder="Define your mission for today…"
         />
       </div>
 
-      {/* Activity section: HUD + Radial Ring */}
-      <div className="activity-section">
+      {/* Dashboard */}
+      <div className="home-dashboard">
 
-        {/* Today's HUD */}
-        <div className="today-hud">
-          <div className="hud-section-label">TODAY</div>
-          <div className="hud-stats">
-            <div className="hud-stat">
-              <span className="hud-stat-val">{todayCaptures}</span>
-              <span className="hud-stat-label">captures</span>
-            </div>
-            <div className="hud-stat">
-              <span className="hud-stat-val">{todaySessions}</span>
-              <span className="hud-stat-label">sessions</span>
-            </div>
-            <div className="hud-stat">
-              <span className="hud-stat-val">{todayTasks}</span>
-              <span className="hud-stat-label">done</span>
-            </div>
-            <div className="hud-stat hud-stat--xp">
-              <span className="hud-stat-val">+{todayXP}</span>
-              <span className="hud-stat-label">XP today</span>
-            </div>
+        {/* Status bar */}
+        <div className="dash-bar">
+          <div className="dash-bar-left">
+            <span className="dash-sys-label">⬡ SYSTEM STATUS</span>
+            <span className="dash-date">
+              {new Date().toLocaleDateString('en', { weekday:'short', month:'short', day:'numeric' }).toUpperCase()}
+            </span>
           </div>
-
           {streak > 0 && (
-            <div className="hud-streak">
-              <span className="hud-streak-flame">
-                {streak >= 30 ? '🔵' : streak >= 7 ? '🔥' : '🔥'}
-              </span>
-              <span className="hud-streak-count">{streak}</span>
-              <span className="hud-streak-label">day streak</span>
+            <div className="dash-streak">
+              <span className="dash-streak-icon">{streak >= 7 ? '🔥' : '◉'}</span>
+              <span className="dash-streak-val">{streak}</span>
+              <span className="dash-streak-lbl">DAY STREAK</span>
             </div>
           )}
+        </div>
 
-          <div className="hud-domains">
-            {DOMAINS.map(d => {
-              const count = (game.state.thoughts || [])
-                .filter(t => t.createdAt?.startsWith(today) && t.domain === d).length;
-              if (count === 0) return null;
-              return (
-                <span
-                  key={d}
-                  className="hud-domain-pip"
-                  style={{ '--dc': DOMAIN_COLOR[d] || 'var(--accent)' }}
-                  title={`${d}: ${count}`}
-                >
-                  {d.split('/')[0]}
-                </span>
-              );
-            })}
+        {/* Stat cells */}
+        <div className="dash-stats">
+          <DashStat value={todayCaptures} label="CAPTURES"  icon="◎" color="var(--accent)" />
+          <DashStat value={todaySessions} label="SESSIONS"  icon="⏱" color="#60a5fa" />
+          <DashStat value={todayTasks}    label="COMPLETED" icon="✓" color="#4ade80" />
+          <DashStat value={`+${todayXP}`} label="XP TODAY"  icon="⚡" color="#fbbf24" hot />
+        </div>
+
+        {/* Lower: domain bars + ring */}
+        <div className="dash-lower">
+          <div className="dash-domains-col">
+            <div className="dash-col-label">DOMAINS ACTIVE TODAY</div>
+            {activeDomains.length > 0 ? (
+              <div className="dash-domain-bars">
+                {activeDomains.map(({ name, count, pct }) => (
+                  <div key={name} className="ddb" style={{ '--dc': DOMAIN_COLOR[name] || 'var(--accent)' }}>
+                    <span className="ddb-name">{name.split('/')[0]}</span>
+                    <div className="ddb-track">
+                      <div className="ddb-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="ddb-count">{count}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="dash-no-domains">No captures yet — first one earns 10 XP</div>
+            )}
+          </div>
+          <div className="dash-ring-col">
+            <div className="dash-col-label">30-DAY PULSE</div>
+            <RadialRing
+              thoughts={game.state.thoughts || []}
+              sessions={game.state.sessions || []}
+            />
           </div>
         </div>
 
-        {/* Radial ring */}
-        <RadialRing
-          thoughts={game.state.thoughts || []}
-          sessions={game.state.sessions || []}
-        />
       </div>
 
       {/* Recent thoughts */}
@@ -224,6 +306,8 @@ export default function HomeView({ game, captureRef, onViewAll, momentum = 0, on
                 thought={t}
                 updateThought={game.updateThought}
                 deleteThought={game.deleteThought}
+                onSendToWorkbench={sendToWorkbench}
+                inWorkbench={workbenchIds?.has(t.id)}
               />
             ))}
           </div>

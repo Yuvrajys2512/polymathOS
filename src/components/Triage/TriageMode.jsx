@@ -22,10 +22,11 @@ function TriageComplete({ stats, onClose }) {
 }
 
 export default function TriageMode({ thoughts, updateThought, onClose, onStartFocus }) {
-  const [index,   setIndex]   = useState(0);
-  const [phase,   setPhase]   = useState('idle'); // idle | exit-left | exit-right | exit-up
-  const [timeLeft, setTimeLeft] = useState(TIMER_SECS);
-  const [stats,   setStats]   = useState({ kept: 0, archived: 0, focused: 0 });
+  const [index,       setIndex]       = useState(0);
+  const [phase,       setPhase]       = useState('idle');
+  const [timeLeft,    setTimeLeft]    = useState(TIMER_SECS);
+  const [stats,       setStats]       = useState({ kept: 0, archived: 0, focused: 0 });
+  const [hoverAction, setHoverAction] = useState(null);
   const timerRef  = useRef(null);
   const phaseRef  = useRef('idle');
   phaseRef.current = phase;
@@ -33,8 +34,6 @@ export default function TriageMode({ thoughts, updateThought, onClose, onStartFo
   const queue   = thoughts;
   const thought = queue[index];
   const color   = thought ? (DOMAIN_COLOR[thought.domain] || 'var(--accent)') : 'var(--accent)';
-  const radius  = 44;
-  const circ    = 2 * Math.PI * radius;
 
   const advance = useCallback((direction, extraAction) => {
     if (phaseRef.current !== 'idle') return;
@@ -45,7 +44,7 @@ export default function TriageMode({ thoughts, updateThought, onClose, onStartFo
       setIndex(i => i + 1);
       setPhase('idle');
       setTimeLeft(TIMER_SECS);
-    }, 360);
+    }, 380);
   }, []);
 
   const handleKeep = useCallback(() => {
@@ -69,7 +68,6 @@ export default function TriageMode({ thoughts, updateThought, onClose, onStartFo
     });
   }, [advance, thought, updateThought, onClose, onStartFocus]);
 
-  // Per-card countdown
   useEffect(() => {
     if (!thought) return;
     setTimeLeft(TIMER_SECS);
@@ -83,7 +81,6 @@ export default function TriageMode({ thoughts, updateThought, onClose, onStartFo
     return () => clearInterval(timerRef.current);
   }, [index]);
 
-  // Keyboard
   useEffect(() => {
     const h = e => {
       if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
@@ -100,81 +97,130 @@ export default function TriageMode({ thoughts, updateThought, onClose, onStartFo
     return <TriageComplete stats={stats} onClose={onClose} />;
   }
 
-  const timerFrac = timeLeft / TIMER_SECS;
+  const timerFrac   = timeLeft / TIMER_SECS;
   const urgentColor = timeLeft <= 3 ? '#f87171' : color;
+  const ghost1      = queue[index + 1];
+  const ghost2      = queue[index + 2];
 
   return (
-    <div className="triage-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div
+      className={`triage-backdrop${hoverAction ? ` triage-hover-${hoverAction}` : ''}`}
+      style={{ '--tc': color }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      {/* Progress bar */}
+      <div className="triage-progress-track">
+        <div className="triage-progress-fill" style={{ width: `${(index / queue.length) * 100}%`, background: color, boxShadow: `0 0 10px ${color}` }} />
+      </div>
+
       {/* Header */}
       <div className="triage-header">
-        <span className="triage-title">HYPER-TRIAGE</span>
+        <div className="triage-header-left">
+          <span className="triage-title">◈ HYPER-TRIAGE</span>
+          <div className="triage-live-stats">
+            {stats.archived > 0 && <span key="a" className="tls-chip tls-archived">↙ {stats.archived}</span>}
+            {stats.focused  > 0 && <span key="f" className="tls-chip tls-focused">↑ {stats.focused}</span>}
+            {stats.kept     > 0 && <span key="k" className="tls-chip tls-kept">↗ {stats.kept}</span>}
+          </div>
+        </div>
         <span className="triage-count" style={{ color }}>{index + 1} / {queue.length}</span>
         <button className="icon ghost" style={{ fontSize: 16 }} onClick={onClose}>✕</button>
       </div>
 
-      {/* Progress */}
-      <div className="triage-progress-track">
-        <div
-          className="triage-progress-fill"
-          style={{ width: `${(index / queue.length) * 100}%`, background: color }}
-        />
-      </div>
-
-      {/* Timer ring */}
-      <div className="triage-timer-ring">
-        <svg width="100" height="100" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
-          <circle
-            cx="50" cy="50" r={radius}
-            fill="none" stroke={urgentColor}
-            strokeWidth="3"
-            strokeDasharray={circ}
-            strokeDashoffset={circ * (1 - timerFrac)}
-            strokeLinecap="round"
-            transform="rotate(-90 50 50)"
-            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.4s ease' }}
+      {/* Card stack */}
+      <div className="triage-card-stack">
+        {ghost2 && <div className="triage-ghost triage-ghost-2" />}
+        {ghost1 && (
+          <div
+            className="triage-ghost triage-ghost-1"
+            style={{ '--gc': DOMAIN_COLOR[ghost1.domain] || 'rgba(255,255,255,0.1)' }}
           />
-        </svg>
-        <span className="triage-timer-num" style={{ color: urgentColor }}>{timeLeft}</span>
-      </div>
-
-      {/* Thought card */}
-      <div
-        className={`triage-card${phase !== 'idle' ? ` triage-${phase}` : ' triage-enter'}`}
-        key={thought.id}
-        style={{ '--tc': color }}
-      >
-        <div className="tc-domain" style={{ color }}>{thought.domain}</div>
-        <p className="tc-text">{thought.text}</p>
-        {thought.insight && thought.insight !== 'Classifying…' && (
-          <p className="tc-insight">{thought.insight}</p>
         )}
-        <div className="tc-pills">
-          <span className="pill typ">{thought.type}</span>
-          <span className={`pill ${thought.priority}`}>{thought.priority}</span>
-          {(thought.tags || []).slice(0, 3).map(tag => (
-            <span className="pill" key={tag}>#{tag}</span>
-          ))}
+
+        <div
+          className={`triage-card${phase !== 'idle' ? ` triage-${phase}` : ' triage-enter'}`}
+          key={thought.id}
+          style={{ '--tc': color }}
+        >
+          {/* Card header row */}
+          <div className="tc-top-row">
+            <div className="tc-domain" style={{ color }}>
+              <span className="tc-domain-dot" style={{ background: color }} />
+              {thought.domain}
+            </div>
+            <div className="tc-timer-display" style={{ color: urgentColor }}>
+              <span className="tc-timer-num">{timeLeft}</span>
+              <span className="tc-timer-s">s</span>
+            </div>
+          </div>
+
+          {/* Thought text */}
+          <p className="tc-text">{thought.text}</p>
+
+          {/* Insight */}
+          {thought.insight && thought.insight !== 'Classifying…' && (
+            <p className="tc-insight">◎ {thought.insight}</p>
+          )}
+
+          {/* Pills */}
+          <div className="tc-pills">
+            <span className="pill typ">{thought.type}</span>
+            <span className={`pill ${thought.priority}`}>{thought.priority}</span>
+            {(thought.tags || []).slice(0, 3).map(tag => (
+              <span className="pill" key={tag}>#{tag}</span>
+            ))}
+          </div>
+
+          {/* Timer bar at bottom of card */}
+          <div className="tc-timer-track">
+            <div
+              className="tc-timer-fill"
+              style={{
+                width: `${timerFrac * 100}%`,
+                background: urgentColor,
+                boxShadow: `0 0 12px ${urgentColor}`,
+                transition: 'width 1s linear, background 0.4s ease',
+              }}
+            />
+          </div>
         </div>
       </div>
 
       {/* Action buttons */}
       <div className="triage-actions">
-        <button className="triage-btn triage-btn-left" onClick={handleArchive}>
-          <span className="tba-key">←</span>
-          <span className="tba-label">Archive</span>
+        <button
+          className="triage-btn triage-btn-left"
+          onClick={handleArchive}
+          onMouseEnter={() => setHoverAction('archive')}
+          onMouseLeave={() => setHoverAction(null)}
+        >
+          <span className="tba-arrow">←</span>
+          <span className="tba-label">ARCHIVE</span>
+          <span className="tba-key">A</span>
         </button>
-        <button className="triage-btn triage-btn-up" onClick={handleFocus}>
-          <span className="tba-key">↑</span>
-          <span className="tba-label">Focus</span>
+        <button
+          className="triage-btn triage-btn-up"
+          onClick={handleFocus}
+          onMouseEnter={() => setHoverAction('focus')}
+          onMouseLeave={() => setHoverAction(null)}
+        >
+          <span className="tba-arrow">↑</span>
+          <span className="tba-label">FOCUS NOW</span>
+          <span className="tba-key">W</span>
         </button>
-        <button className="triage-btn triage-btn-right" onClick={handleKeep}>
-          <span className="tba-key">→</span>
-          <span className="tba-label">Keep</span>
+        <button
+          className="triage-btn triage-btn-right"
+          onClick={handleKeep}
+          onMouseEnter={() => setHoverAction('keep')}
+          onMouseLeave={() => setHoverAction(null)}
+        >
+          <span className="tba-arrow">→</span>
+          <span className="tba-label">KEEP</span>
+          <span className="tba-key">D</span>
         </button>
       </div>
 
-      <p className="triage-hint">arrow keys · auto-keeps on timeout</p>
+      <p className="triage-hint">swipe direction · auto-keeps on timeout</p>
     </div>
   );
 }

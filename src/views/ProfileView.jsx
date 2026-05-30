@@ -51,11 +51,21 @@ function formatFocusTime(minutes) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+const STAT_ICONS = {
+  'Streak': '◉', 'Best Streak': '★', 'Momentum': '⟁', 'Polymath Pts': '◆',
+  'Focus Time': '⏱', 'Sessions': '▶', 'Thoughts': '◎', 'Tasks Done': '✓',
+  'Boss Kills': '⚔', 'Achievements': '✦', 'Active Domains': '⊞',
+};
+
 function XpBar({ current, max, color }) {
   const pct = max > 0 ? Math.min(100, (current / max) * 100) : 0;
   return (
     <div className="prof-xpbar-track">
-      <div className="prof-xpbar-fill" style={{ width: `${pct}%`, background: color || 'var(--accent)' }} />
+      <div className="prof-xpbar-fill" style={{
+        width: `${pct}%`,
+        background: `linear-gradient(90deg, ${color}66 0%, ${color} 100%)`,
+        boxShadow: `0 0 12px ${color}88`,
+      }} />
     </div>
   );
 }
@@ -63,7 +73,8 @@ function XpBar({ current, max, color }) {
 function StatBox({ label, value, sub, color }) {
   return (
     <div className="prof-stat-box" style={{ '--sc': color || 'var(--accent)' }}>
-      <span className="prof-stat-val" style={{ color: color || 'var(--ink)' }}>{value}</span>
+      <span className="prof-stat-icon">{STAT_ICONS[label] || '·'}</span>
+      <span className="prof-stat-val">{value}</span>
       <span className="prof-stat-label">{label}</span>
       {sub && <span className="prof-stat-sub">{sub}</span>}
     </div>
@@ -102,39 +113,48 @@ function RankProgression({ level }) {
 }
 
 function SevenDayActivity({ sessions, thoughts }) {
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(Date.now() - (6 - i) * 86400000);
-    const str = d.toISOString().split('T')[0];
-    const label = d.toLocaleDateString('en', { weekday: 'short' }).slice(0, 2).toUpperCase();
-    const isToday = str === todayStr();
-    const domainSet = new Set([
-      ...(sessions || []).filter(s => s.at?.startsWith(str)).map(s => s.domain),
-      ...(thoughts || []).filter(t => t.createdAt?.startsWith(str) && t.domain !== 'Sorting').map(t => t.domain),
-    ]);
-    return { str, label, isToday, domains: [...domainSet].filter(Boolean).slice(0, 5) };
-  }), [sessions, thoughts]);
+  const days = useMemo(() => {
+    const raw = Array.from({ length: 7 }, (_, i) => {
+      const d   = new Date(Date.now() - (6 - i) * 86400000);
+      const str = d.toISOString().split('T')[0];
+      const label   = d.toLocaleDateString('en', { weekday: 'short' }).slice(0, 2).toUpperCase();
+      const isToday = str === todayStr();
+      const dayT = (thoughts || []).filter(t => t.createdAt?.startsWith(str) && t.domain !== 'Sorting');
+      const dayS = (sessions  || []).filter(s => s.at?.startsWith(str));
+      const actCount = dayT.length + dayS.length * 2;
+      const domCounts = {};
+      [...dayT.map(t => t.domain), ...dayS.map(s => s.domain)].filter(Boolean)
+        .forEach(d => { domCounts[d] = (domCounts[d] || 0) + 1; });
+      const topDomain = Object.entries(domCounts).sort(([,a],[,b]) => b - a)[0]?.[0];
+      return { str, label, isToday, actCount, topDomain };
+    });
+    const maxAct = Math.max(1, ...raw.map(d => d.actCount));
+    return raw.map(d => ({ ...d, pct: Math.round((d.actCount / maxAct) * 100) }));
+  }, [sessions, thoughts]);
 
   return (
     <div className="prof-7day">
-      {days.map(day => (
-        <div key={day.str} className={`prof-7day-col${day.isToday ? ' today' : ''}`}>
-          <div className="prof-7day-dots">
-            {day.domains.length > 0
-              ? day.domains.map(d => (
-                  <span
-                    key={d}
-                    className="prof-7day-dot"
-                    style={{ background: DOMAIN_COLOR[d] || 'var(--accent)' }}
-                    title={d}
-                  />
-                ))
-              : <span className="prof-7day-dot prof-7day-dot--empty" />
-            }
+      {days.map(day => {
+        const barColor = day.topDomain ? (DOMAIN_COLOR[day.topDomain] || 'var(--accent)') : 'rgba(255,255,255,0.08)';
+        return (
+          <div key={day.str} className={`prof-7day-col${day.isToday ? ' today' : ''}`}>
+            <div className="prof-7day-bar-wrap">
+              <div
+                className="prof-7day-bar"
+                style={{
+                  height: day.actCount > 0 ? `${Math.max(8, day.pct)}%` : '4px',
+                  background: barColor,
+                  boxShadow: day.actCount > 0 ? `0 0 10px ${barColor}` : 'none',
+                  opacity: day.actCount > 0 ? 1 : 0.15,
+                }}
+              />
+            </div>
+            {day.actCount > 0 && <div className="prof-7day-count">{day.actCount}</div>}
+            <div className="prof-7day-label">{day.label}</div>
+            {day.isToday && <div className="prof-7day-today-pip" />}
           </div>
-          <div className="prof-7day-label">{day.label}</div>
-          {day.isToday && <div className="prof-7day-today-pip" />}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -200,7 +220,7 @@ export default function ProfileView({ game }) {
       {/* ── Hero Card ── */}
       <div className="prof-hero" style={{ '--rank-color': rank.color }}>
         <div className="prof-hero-avatar">
-          <span className="prof-avatar-glyph">◆</span>
+          <span className="prof-avatar-glyph" style={{ color: rank.color }}>◆</span>
         </div>
 
         <div className="prof-hero-info">

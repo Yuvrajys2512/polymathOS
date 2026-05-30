@@ -24,22 +24,13 @@ function relTime(iso) {
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 
 const FLOW_ZONES = [
-  { key: 'surface', label: 'SURFACE', min: 0,  color: '#6b7280' },
-  { key: 'warm',    label: 'WARM',    min: 8,  color: '#f59e0b' },
-  { key: 'zone',    label: 'ZONE',    min: 18, color: '#60a5fa' },
-  { key: 'flow',    label: 'FLOW',    min: 30, color: '#a78bfa' },
-  { key: 'ultra',   label: 'ULTRA',   min: 45, color: null },
+  { key: 'idle',  label: 'IDLE',    min: 0,  color: '#6b7280' },
+  { key: 'warm',  label: 'WARM',    min: 8,  color: '#f59e0b' },
+  { key: 'zone',  label: 'ZONE',    min: 18, color: '#60a5fa' },
+  { key: 'flow',  label: 'FLOW',    min: 30, color: '#a78bfa' },
+  { key: 'ultra', label: 'ULTRA',   min: 45, color: null      },
 ];
 const ZONE_MAX = 50;
-
-const NEURAL_PRESETS = {
-  builder:  { waves: [{f:18,a:0.30,p:0},{f:11,a:0.46,p:1.4},{f:6,a:0.60,p:2.6}],  label:'β BETA · α ALPHA · θ THETA', color:'#00d9b1' },
-  research: { waves: [{f:7,a:0.68,p:0},{f:4,a:0.46,p:0.9},{f:11,a:0.26,p:1.8}],   label:'θ THETA · δ DELTA · α ALPHA', color:'#60a5fa' },
-  creative: { waves: [{f:10,a:0.53,p:0},{f:7,a:0.40,p:1.1},{f:14,a:0.28,p:2.3}],  label:'α ALPHA · θ THETA · β BETA',  color:'#c084fc' },
-  locked:   { waves: [{f:24,a:0.36,p:0},{f:18,a:0.46,p:0.6},{f:30,a:0.26,p:1.9}], label:'β BETA · γ GAMMA · β BETA',   color:'#f87171' },
-  night:    { waves: [{f:5,a:0.70,p:0},{f:3,a:0.53,p:1.3},{f:8,a:0.30,p:0.8}],    label:'θ THETA · δ DELTA · α ALPHA', color:'#818cf8' },
-  exec:     { waves: [{f:22,a:0.36,p:0},{f:15,a:0.42,p:1.0},{f:10,a:0.28,p:2.2}], label:'β BETA · α ALPHA · θ THETA',  color:'#fbbf24' },
-};
 
 // ── IDENTITY MODE SELECTOR ──────────────────────────────────────────────────
 
@@ -122,117 +113,6 @@ function FlowDepthGauge({ elapsedMin, modeColor, running, pauseCount }) {
             style={i === zoneIdx ? { color: zCol } : {}}
           >{z.label}</span>
         ))}
-      </div>
-    </div>
-  );
-}
-
-// ── NEURAL FREQUENCY CANVAS ──────────────────────────────────────────────────
-
-function NeuralFreqCanvas({ modeId, modeColor, running, elapsedMin }) {
-  const canvasRef  = useRef(null);
-  const rafRef     = useRef(null);
-  const tRef       = useRef(0);
-  const runRef     = useRef(running);
-  const elapsedRef = useRef(elapsedMin);
-  const modeIdRef  = useRef(modeId);
-
-  useEffect(() => { runRef.current   = running;   }, [running]);
-  useEffect(() => { elapsedRef.current = elapsedMin; }, [elapsedMin]);
-  useEffect(() => { modeIdRef.current  = modeId;   }, [modeId]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    function frame() {
-      const W = canvas.offsetWidth  || 400;
-      const H = canvas.offsetHeight || 110;
-      if (canvas.width !== W || canvas.height !== H) {
-        canvas.width = W; canvas.height = H;
-      }
-
-      const pr      = NEURAL_PRESETS[modeIdRef.current] || NEURAL_PRESETS.builder;
-      const run     = runRef.current;
-      const elapsed = elapsedRef.current;
-      const sync    = Math.min(1, elapsed / 35);
-
-      tRef.current += run ? 0.022 : 0.005;
-      const t = tRef.current;
-      const cY = H / 2;
-
-      ctx.clearRect(0, 0, W, H);
-
-      // Scanline grid
-      ctx.lineWidth = 0.5;
-      ctx.strokeStyle = 'rgba(255,255,255,0.028)';
-      for (let y = 0; y < H; y += H / 4) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-      }
-      for (let x = 0; x <= W; x += W / 10) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-      }
-
-      const col = pr.color;
-      const cr = parseInt(col.slice(1, 3), 16);
-      const cg = parseInt(col.slice(3, 5), 16);
-      const cb = parseInt(col.slice(5, 7), 16);
-
-      pr.waves.forEach((wave, i) => {
-        const alpha = (0.75 - i * 0.2) * (run ? 1 : 0.3);
-        const amp   = wave.a * (cY - 6) * (1 + sync * 0.18);
-        const phase = wave.p * (1 - sync * 0.65);
-        const spd   = 1 - i * 0.12;
-
-        ctx.beginPath();
-        const step = Math.max(1, Math.floor(W / 220));
-        for (let x = 0; x <= W; x += step) {
-          const y = cY + amp * Math.sin((x / W) * Math.PI * 2 * wave.f + phase + t * spd);
-          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
-        ctx.lineWidth   = i === 0 ? 1.8 : 1.3 - i * 0.15;
-        ctx.shadowColor = col;
-        ctx.shadowBlur  = run ? Math.max(0, 7 - i * 2) : 0;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-      });
-
-      // Coherence flash at high sync
-      if (sync > 0.55 && run) {
-        const fl = ((sync - 0.55) / 0.45) * 0.18;
-        const grd = ctx.createLinearGradient(W * 0.46, 0, W * 0.54, 0);
-        grd.addColorStop(0, `rgba(${cr},${cg},${cb},0)`);
-        grd.addColorStop(0.5, `rgba(${cr},${cg},${cb},${fl})`);
-        grd.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, W, H);
-      }
-
-      rafRef.current = requestAnimationFrame(frame);
-    }
-
-    rafRef.current = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, []);
-
-  const preset  = NEURAL_PRESETS[modeId] || NEURAL_PRESETS.builder;
-  const status  = elapsedMin >= 35 ? 'COHERENT' : elapsedMin >= 15 ? 'SYNCING' : 'INITIALIZING';
-  const statusC = { INITIALIZING: '#6b7280', SYNCING: '#f59e0b', COHERENT: preset.color };
-
-  return (
-    <div className="neural-panel" style={{ '--neural-color': preset.color }}>
-      <div className="neural-header">
-        <span className="neural-title">NEURAL SYNC</span>
-        <span className="neural-waves-label">{preset.label}</span>
-      </div>
-      <canvas ref={canvasRef} className="neural-canvas" />
-      <div className="neural-footer">
-        <span className="neural-status" style={{ color: statusC[status] }}>● {status}</span>
-        <span className="neural-elapsed" style={{ opacity: elapsedMin > 0.5 ? 1 : 0 }}>
-          {Math.floor(elapsedMin)}m synced
-        </span>
       </div>
     </div>
   );
@@ -382,6 +262,40 @@ function IntentRating({ intent, onRate }) {
             onClick={() => onRate(s)}
           >★</button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ── LIVE SESSION PANEL ───────────────────────────────────────────────────────
+
+function LiveSessionPanel({ elapsedFocusSec, elapsedMin, modeColor, identityMode }) {
+  const m    = Math.floor(elapsedFocusSec / 60);
+  const s    = elapsedFocusSec % 60;
+  const zone = FLOW_ZONES.reduce((acc, z) => elapsedMin >= z.min ? z : acc, FLOW_ZONES[0]);
+  const zCol = zone.color || modeColor;
+  const bonus = zone.key === 'ultra' ? '2.0×' : zone.key === 'flow' ? '1.5×' : zone.key === 'zone' ? '1.2×' : null;
+
+  return (
+    <div className="live-session-panel" style={{ '--mc': modeColor, '--zc': zCol }}>
+      <div className="lsp-header">
+        <span className="lsp-dot" />
+        <span className="lsp-title">SESSION ACTIVE</span>
+      </div>
+      <div className="lsp-time">
+        {String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
+      </div>
+      <div className="lsp-zone" style={{ color: zCol }}>◈ {zone.label}</div>
+      {bonus && (
+        <div className="lsp-bonus">
+          <span className="lsp-bonus-val" style={{ color: zCol }}>{bonus}</span>
+          <span className="lsp-bonus-lbl">FLOW BONUS</span>
+        </div>
+      )}
+      <div className="lsp-mode-row">
+        <span style={{ color: modeColor }}>{identityMode?.icon}</span>
+        <span className="lsp-mode-name">{identityMode?.label?.split(' ')[0] || 'FOCUS'}</span>
+        <span className="lsp-mode-mult" style={{ color: modeColor }}>{identityMode?.xpMult}× XP</span>
       </div>
     </div>
   );
@@ -688,11 +602,12 @@ export default function FocusTimer({
           {/* Controls */}
           <div className="timer-controls">
             <button
-              className="primary"
+              className={`primary${running ? ' timer-btn-running' : ''}`}
               style={{
                 background: `linear-gradient(135deg, ${modeColor}, ${modeColor}cc)`,
                 borderColor: modeColor,
                 boxShadow: `0 0 24px ${identityMode?.glow || 'rgba(0,217,177,0.35)'}`,
+                '--mc': modeColor,
               }}
               onClick={toggleRunning}
             >
@@ -742,12 +657,14 @@ export default function FocusTimer({
 
         {/* ── RIGHT COLUMN (desktop) / below (mobile) ── */}
         <div className="focus-right-col">
-          <NeuralFreqCanvas
-            modeId={modeId}
-            modeColor={modeColor}
-            running={running}
-            elapsedMin={elapsedMin}
-          />
+          {running && (
+            <LiveSessionPanel
+              elapsedFocusSec={elapsedFocusSec}
+              elapsedMin={elapsedMin}
+              modeColor={modeColor}
+              identityMode={identityMode}
+            />
+          )}
           <PastYouRivalry
             sessions={sessions}
             identityMode={identityMode}

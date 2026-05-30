@@ -1,10 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { DOMAIN_COLOR, TYPE_ICON } from '../../constants/index.js';
 
-const INTERVAL_MS = 20 * 60 * 1000; // 20 min
-const DISPLAY_MS  = 12 * 1000;       // 12 sec visible
+const INTERVAL_MS = 45 * 60 * 1000; // 45 min background fallback
+const DISPLAY_MS  = 14 * 1000;       // 14 sec visible
 
-function pickOldInsight(thoughts) {
+function pickFromDomain(thoughts, domain, excludeId) {
+  const cutoff = Date.now() - 7 * 86400000;
+  const pool = thoughts.filter(t =>
+    !t.done &&
+    t.id !== excludeId &&
+    new Date(t.createdAt).getTime() < cutoff &&
+    t.domain === domain
+  );
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function pickRandom(thoughts) {
   const cutoff = Date.now() - 7 * 86400000;
   const pool = thoughts.filter(t =>
     !t.done &&
@@ -15,14 +27,13 @@ function pickOldInsight(thoughts) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export default function SerendipityEngine({ thoughts }) {
+export default function SerendipityEngine({ thoughts, captureSignal }) {
   const [card, setCard]       = useState(null);
   const [visible, setVisible] = useState(false);
   const timerRef = useRef(null);
   const hideRef  = useRef(null);
 
-  function fire() {
-    const t = pickOldInsight(thoughts);
+  function show(t) {
     if (!t) return;
     setCard(t);
     setVisible(true);
@@ -30,8 +41,15 @@ export default function SerendipityEngine({ thoughts }) {
     hideRef.current = setTimeout(() => setVisible(false), DISPLAY_MS);
   }
 
+  // Trigger on capture: surface an old thought from the same domain
   useEffect(() => {
-    timerRef.current = setInterval(fire, INTERVAL_MS);
+    if (!captureSignal) return;
+    show(pickFromDomain(thoughts, captureSignal.domain, captureSignal.thoughtId));
+  }, [captureSignal]);
+
+  // Background fallback: surface any old insight every 45 min
+  useEffect(() => {
+    timerRef.current = setInterval(() => show(pickRandom(thoughts)), INTERVAL_MS);
     return () => {
       clearInterval(timerRef.current);
       clearTimeout(hideRef.current);
