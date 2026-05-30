@@ -5758,14 +5758,38 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
     width: 100%;
   }
 
+  /* ── TopBar: hide low-priority pills on small screens ── */
+  .stat-pill-label { display: none; }
+  .stat-pill { padding: 4px 8px; gap: 3px; }
+  .stat-pill-value { font-size: 12px; }
+  /* Hide SCORE and MOMENTUM pills on very small screens to reduce clutter */
+  .topbar-stats .stat-pill:nth-child(3),
+  .topbar-stats .stat-pill:nth-child(4) { display: none; }
+  .brand-logo { font-size: 12px; letter-spacing: 0.08em; }
+
   /* ── View header ── */
-  .view-title { font-size: 14px; }
-  .view-hint  { font-size: 11px; }
+  .view-title { font-size: 13px; }
+  .view-hint  { display: none; }
 
   /* ── Home view ── */
+  .home-view { gap: 16px; }
   .home-hero { gap: 10px; }
-  .capture-hero-wrap .capture-textarea { min-height: 90px; font-size: 13px; }
-  .intention-row { gap: 8px; }
+  .capture-hero-wrap .capture-textarea { min-height: 90px; font-size: 13px !important; }
+  .intention-banner { padding: 10px 14px; }
+  .ib-input { font-size: 13px !important; }
+
+  /* ── Home dashboard ── */
+  .home-dashboard { border-radius: var(--radius-s); }
+  .dash-bar { padding: 8px 12px; }
+  .dash-sys-label { font-size: 8px; }
+  .dash-stats { grid-template-columns: repeat(2, 1fr); }
+  .dash-stat { padding: 14px 8px 12px; }
+  .ds-value { font-size: 22px; }
+  .ds-label { font-size: 7px; }
+  .dash-lower { flex-direction: column; }
+  .dash-domains-col { border-right: none; border-bottom: 1px solid var(--border); padding: 12px 14px; }
+  .dash-ring-col { padding: 10px 14px; align-items: center; }
+  .ddb { grid-template-columns: 56px 1fr 18px; }
 
   /* ── Capture actions ── */
   .capture-actions { flex-wrap: wrap; gap: 8px; }
@@ -5773,27 +5797,55 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
   /* ── Recent thoughts ── */
   .home-recent { gap: 8px; }
 
+  /* ── Profile view mobile ── */
+  .profile-view { gap: 20px; }
+  .prof-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .prof-stat-box { padding: 12px 6px; }
+  .prof-stat-val { font-size: 16px; }
+  .prof-7day { height: 80px; }
+  .prof-hero { padding: 16px; gap: 14px; }
+  .prof-level-num { font-size: 20px; }
+  .prof-char-row { grid-template-columns: 36px 1fr 36px; gap: 10px; }
+  .prof-char-key { font-size: 13px; }
+  .prof-domain-row { grid-template-columns: 8px 72px 32px 1fr 44px; gap: 6px; }
+
+  /* ── Character view ── */
+  .character-view { grid-template-columns: 1fr !important; }
+
   /* ── Heatmap ── */
   .heatmap-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* ── Focus view ── */
-  .focus-view { gap: 16px; }
+  .focus-view { gap: 12px; }
   .focus-layout { grid-template-columns: 1fr; gap: 12px; }
-  .focus-right-col { position: static; }
-  .neural-canvas { height: 80px; }
+  .focus-right-col { position: static; width: 100%; }
   .flow-gauge-zones { display: none; }
   .void-restore-btn { bottom: 80px; }
 
-  /* Mode cards: 2 columns on mobile */
-  .mode-grid {
+  /* Mode cards: 2 columns on mobile (fix: use correct class name) */
+  .identity-modes {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px;
   }
-  .mode-card { padding: 10px 8px; }
-  .mode-name { font-size: 10px; }
+  .mode-card { padding: 12px 8px; min-height: 70px; }
+  .mode-card-icon { font-size: 18px !important; }
+  .mode-card-name { font-size: 9px; }
 
-  /* Timer display: slightly smaller */
-  .timer-display { font-size: clamp(42px, 12vw, 64px); }
+  /* AntiTimer: smaller on mobile */
+  .anti-timer-wrap { width: 200px !important; height: 200px !important; }
+
+  /* Timer display */
+  .timer-digits { font-size: clamp(38px, 12vw, 56px) !important; }
+
+  /* Time presets: wrap tighter */
+  .timer-presets { gap: 5px; justify-content: center; }
+  .t-preset { padding: 5px 10px; font-size: 12px; }
+
+  /* Timer controls: full width */
+  .timer-controls { grid-template-columns: 1fr 1fr 40px; }
+
+  /* Flow gauge */
+  .flow-gauge { padding: 8px 10px; }
 
   /* Focus log: horizontal scroll */
   .focus-log { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 12px; }
@@ -5801,6 +5853,10 @@ input[type="range"] { padding: 0; box-shadow: none; border: none; height: 3px; b
 
   /* Session log: full width */
   .session-log { max-width: 100%; }
+
+  /* Live session panel: full width on mobile */
+  .live-session-panel { width: 100%; }
+  .lsp-time { font-size: 32px; }
 
   /* ── Thoughts view ── */
   .thoughts-filters { gap: 8px; }

@@ -118,90 +118,6 @@ function FlowDepthGauge({ elapsedMin, modeColor, running, pauseCount }) {
   );
 }
 
-// ── PAST-YOU RIVALRY ────────────────────────────────────────────────────────
-
-function PastYouRivalry({ sessions, identityMode, elapsedMin, running, modeColor }) {
-  const best = useMemo(() => {
-    if (!identityMode) return null;
-    const ms = sessions.filter(s => s.identityMode === identityMode.id && (s.minutes || 0) >= 5);
-    if (!ms.length) return null;
-    return ms.reduce((b, s) => (s.minutes || 0) > (b.minutes || 0) ? s : b);
-  }, [sessions, identityMode?.id]);
-
-  if (!best) {
-    return (
-      <div className="rivalry-panel rivalry-empty">
-        <div className="rivalry-header">
-          <span className="rivalry-label">⚡ PAST YOU</span>
-        </div>
-        <div className="rivalry-no-data">
-          Complete a session to set your personal record
-        </div>
-      </div>
-    );
-  }
-
-  const bestMin = best.minutes || 0;
-  const delta   = running ? elapsedMin - bestMin : null;
-  const winning = delta !== null && delta > 0;
-  const maxBar  = Math.max(bestMin, elapsedMin, 1);
-
-  return (
-    <div
-      className={`rivalry-panel${winning ? ' rivalry-winning' : ''}`}
-      style={{ '--rivalry-color': modeColor }}
-    >
-      <div className="rivalry-header">
-        <span className="rivalry-label">⚡ PAST YOU</span>
-        {delta !== null && (
-          <span className={`rivalry-delta${winning ? ' winning' : ' losing'}`}>
-            {winning ? '+' : '−'}{Math.floor(Math.abs(delta))}m {winning ? 'ahead' : 'behind'}
-          </span>
-        )}
-      </div>
-      <div className="rivalry-ghost">
-        <div className="rivalry-ghost-icon">◎</div>
-        <div className="rivalry-ghost-stats">
-          <span className="rivalry-stat-main">{bestMin}m best</span>
-          <span className="rivalry-stat-sub">+{best.xpEarned || 15} XP</span>
-        </div>
-      </div>
-      {running && (
-        <div className="rivalry-live">
-          <div className="rivalry-live-rows">
-            <div className="rivalry-live-row">
-              <span className="rll-name">PAST</span>
-              <div className="rll-track">
-                <div className="rll-fill rll-ghost" style={{ width: `${(bestMin / maxBar) * 100}%` }} />
-              </div>
-              <span className="rll-val">{bestMin}m</span>
-            </div>
-            <div className="rivalry-live-row">
-              <span className="rll-name" style={{ color: modeColor }}>YOU</span>
-              <div className="rll-track">
-                <div
-                  className="rll-fill rll-you"
-                  style={{
-                    width: `${(elapsedMin / maxBar) * 100}%`,
-                    background: modeColor,
-                    boxShadow: `0 0 8px ${modeColor}80`,
-                  }}
-                />
-              </div>
-              <span className="rll-val" style={{ color: modeColor }}>{Math.floor(elapsedMin)}m</span>
-            </div>
-          </div>
-          {winning && (
-            <div className="rivalry-record" style={{ color: modeColor }}>
-              ★ NEW RECORD IN PROGRESS
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── SESSION QUICK CAPTURE ───────────────────────────────────────────────────
 
 function SessionCapture({ running, submitThought, groqKey }) {
@@ -655,24 +571,17 @@ export default function FocusTimer({
           )}
         </section>
 
-        {/* ── RIGHT COLUMN (desktop) / below (mobile) ── */}
-        <div className="focus-right-col">
-          {running && (
+        {/* ── RIGHT COLUMN — live panel only when session is running ── */}
+        {running && (
+          <div className="focus-right-col">
             <LiveSessionPanel
               elapsedFocusSec={elapsedFocusSec}
               elapsedMin={elapsedMin}
               modeColor={modeColor}
               identityMode={identityMode}
             />
-          )}
-          <PastYouRivalry
-            sessions={sessions}
-            identityMode={identityMode}
-            elapsedMin={elapsedMin}
-            running={running}
-            modeColor={modeColor}
-          />
-        </div>
+          </div>
+        )}
 
       </div>
 
